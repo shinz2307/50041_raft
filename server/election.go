@@ -1,3 +1,6 @@
+//go:build exclude
+// +build exclude
+
 // Leader election logic
 package server
 
@@ -11,11 +14,11 @@ func (n *Node) startElection() {
 	// Question: can you start an election for a term that someone else is already electing for?
 	// If yes, maybe have a mechanism such that you do not start if you have already voted for someone with same term
 	// Node 1 -> request vote -> node 2
-	// Node 2 -> vote for node 1 
+	// Node 2 -> vote for node 1
 	// Node 2 realise no heartbeat
 	// Node 2 --> start election
-		// node 2 doesnt bother check and start election => cannot vote for itself
-		// node 2 needs to check if it has an availale vote before it can vote for itself
+	// node 2 doesnt bother check and start election => cannot vote for itself
+	// node 2 needs to check if it has an availale vote before it can vote for itself
 	n.votedFor = n.id
 
 	// Start randomised election timer (150-300ms)

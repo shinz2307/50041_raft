@@ -24,25 +24,25 @@ type LogEntry struct {
 }
 
 type Node struct {
-	state State
-	id    int
+	State State
+	Id    int
 
 	// Persistent states
-	currentTerm int
-	votedFor    int
-	log         []LogEntry
+	CurrentTerm int
+	VotedFor    int
+	Log         []LogEntry
 
 	// Volatile states
-	commitIndex int
-	lastApplied int
-	leaderID    int
+	CommitIndex int
+	LastApplied int
+	LeaderID    int
 
 	// Volatile leader states
-	nextIndex  map[int]int
-	matchIndex map[int]int
+	NextIndex  map[int]int
+	MatchIndex map[int]int
 
 	// RPC handling fields
-	heartbeatTimeout time.Duration
-	electionTimeout  time.Duration
-	peers            []int
+	HeartbeatTimeout time.Duration
+	ElectionTimeout  time.Duration
+	Peers            []int
 }

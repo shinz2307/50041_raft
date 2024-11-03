@@ -1,3 +1,6 @@
+//go:build exclude
+// +build exclude
+
 // RPC handling (RequestVote, AppendEntries)
 package server
 
