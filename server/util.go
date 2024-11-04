@@ -14,11 +14,15 @@ func (n *Node) RunAsLeader() {
 
 	go n.StartRPCServer()
 
+	// maybe add delay?
+	time.Sleep(2 * time.Second)
+
 	ticker := time.NewTicker(n.HeartbeatInterval)
 	defer ticker.Stop()
 
 	for {
 		select {
+		// Every tick, send heartbeat
 		case <-ticker.C:
 			n.SendHeartbeats()
 		case <-n.QuitChannel:
@@ -73,6 +77,7 @@ func (n *Node) StartRPCServer() {
 		log.Fatalf("Failed to register %s for RPC: %v\n", nodeServiceName, err)
 	}
 
+	// generate port number attach listener to address
 	address := fmt.Sprintf("localhost:%d", 8000+n.Id)
 	log.Printf("Node %d trying to listen on %v...\n", n.Id, address)
 	listener, err := net.Listen("tcp", address)
