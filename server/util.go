@@ -10,7 +10,7 @@ import (
 )
 
 func (n *Node) RunAsLeader() {
-	fmt.Printf("Node %d is starting up as Leader\n", n.Id)
+	log.Printf("Node %d is starting up as Leader\n", n.Id)
 
 	go n.StartRPCServer()
 
@@ -22,14 +22,14 @@ func (n *Node) RunAsLeader() {
 		case <-ticker.C:
 			n.SendHeartbeats()
 		case <-n.QuitChannel:
-			fmt.Printf("Leader Node %d is stopping\n", n.Id)
+			log.Printf("Leader Node %d is stopping\n", n.Id)
 			return
 		}
 	}
 }
 
 func (n *Node) RunAsFollower() {
-	fmt.Printf("Node %d is running as Follower\n", n.Id)
+	log.Printf("Node %d is running as Follower\n", n.Id)
 
 	go n.StartRPCServer()
 
@@ -40,7 +40,7 @@ func (n *Node) RunAsFollower() {
 		case <-n.resetTimeoutChan:
 			// Received heartbeat, reset election timeout
 		case <-time.After(electionTimeout):
-			fmt.Printf("Node %d election timeout. Becoming candidate.\n", n.Id)
+			log.Printf("Node %d election timeout. Becoming candidate.\n", n.Id)
 			// can add election logic here
 			return
 		}
@@ -57,41 +57,53 @@ func (n *Node) SendHeartbeats() {
 			var reply HeartbeatReply
 			err := n.CallHeartbeatRPC(id, args, &reply)
 			if err != nil {
-				fmt.Printf("Leader Node %d failed to send heartbeat to Node %d: %v\n", n.Id, id, err)
+				log.Printf("Leader Node %d failed to send heartbeat to Node %d: %v\n", n.Id, id, err)
 			}
 		}(peerID)
 	}
 }
 
 func (n *Node) StartRPCServer() {
-	fmt.Printf("Node %d is attempting to register\n", n.Id)
+	log.Printf("Node %d is attempting to register\n", n.Id)
 
-	if err := rpc.Register(n); err != nil {
-		if err.Error() == "rpc: service already defined: Node" {
-			log.Printf("Node %d has already been registered\n", n.Id)
-			return
-		}
-		log.Fatalf("Failed to register Node %d for RPC: %v\n", n.Id, err)
+	// Since we are using the same struct, we need to create new server to register the RPC 
+	server := rpc.NewServer() // Create a new server for each node
+	nodeServiceName := fmt.Sprintf("Node%d", n.Id)
+	if err := server.RegisterName(nodeServiceName, n); err != nil {
+		log.Fatalf("Failed to register %s for RPC: %v\n", nodeServiceName, err)
 	}
 
 	address := fmt.Sprintf("localhost:%d", 8000+n.Id)
+	log.Printf("Node %d trying to listen on %v...\n", n.Id, address)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("Node %d failed to listen: %v\n", n.Id, err)
-	}
+	} 
+
 	defer listener.Close()
-	rpc.Accept(listener)
+	log.Printf("Node %d listening on %v...\n", n.Id, address)
+	for {
+        conn, err := listener.Accept()
+        if err != nil {
+            log.Printf("Failed to accept connection: %v", err)
+            continue
+        }
+        go server.ServeConn(conn)
+    }
 }
 
 func (n *Node) CallHeartbeatRPC(peerID int, args *HeartbeatArgs, reply *HeartbeatReply) error {
 	address := fmt.Sprintf("localhost:%d", 8000+peerID) // Construct the target address
-	client, err := rpc.Dial("tcp", address)             // Establish an RPC connection to the follower node
-	if err != nil {                                     // Handle connection error
+	log.Printf("Heartbeat sending to %v\n", address)
+	client, err := rpc.Dial("tcp", address) // Establish an RPC connection to the follower node
+	if err != nil {                         // Handle connection error
 		return err
 	}
 	defer client.Close() // Ensure the connection is closed after the RPC call
 
-	return client.Call("Node.Heartbeat", args, reply) // Make the RPC call to the follower's Heartbeat method
+	// Use the unique service name to call the Heartbeat method on the target node
+	serviceName := fmt.Sprintf("Node%d.Heartbeat", peerID)
+	return client.Call(serviceName, args, reply) // Make the RPC call to the follower's Heartbeat method
 }
 
 func (n *Node) Heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
@@ -100,6 +112,7 @@ func (n *Node) Heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 	select {
 	case n.resetTimeoutChan <- struct{}{}:
 		// Election timeout reset successfully
+		log.Printf("Node %d received heartbeat\n", n.Id)
 	default:
 		// Channel was full; no action needed
 	}
