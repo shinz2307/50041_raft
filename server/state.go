@@ -34,11 +34,20 @@ func (n *Node) BecomeLeader() {
 	if n.State == Candidate {
 		log.Printf("Node %d: Transitioning to Leader for term %d", n.Id, n.CurrentTerm)
 		n.State = Leader
+		n.LeaderID = n.Id
 		// Start sending heartbeats to maintain leadership
-		//n.startHeartbeats()
+		// TODO: For now; i enabled the following but maybe we need an automatic way to send out heartbeats
+		// n.SendHeartbeats()
 	}
+	n.VoteCount = 0
 }
 
-// Transit from Follower to Candidate
+// Follower to Candidate
+func (n *Node) BecomeCandidate() {
+	if n.State == Follower {
+		log.Printf("Node %d: Transitioning to Candidate for term %d", n.Id, n.CurrentTerm)
+		n.State = Candidate
+	}
+}
 
 // Transit from Leader to Follower

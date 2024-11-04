@@ -3,8 +3,8 @@ package main
 
 import (
 	"log"
+	"raft/server"
 	"time"
-	"yourmodule/server"
 )
 
 func main() {
@@ -62,68 +62,4 @@ func main() {
 
 	// Prevent main from exiting
 	select {}
-}
-
-func initialiseLeader(leader *server.Node, heartbeatChannels map[int]chan string, commandChannels map[int]chan string, heartbeatInterval time.Duration, quit chan struct{}) {
-	ticker := time.NewTicker(400 * time.Millisecond) // Heartbeat interval
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-quit:
-			log.Printf("Leader %d: Stopping heartbeats due to simulated failure\n", leader.Id)
-			return // Stop sending heartbeats
-
-		case <-ticker.C:
-			// Send heartbeats to all followers via their heartbeat channels
-			for peerId, hbChan := range heartbeatChannels {
-				if peerId != leader.Id {
-					// AppendEntriesRPC()
-					log.Printf("Leader %d: Sending heartbeat to Follower %d\n", leader.Id, peerId)
-					hbChan <- "heartbeat"
-				}
-			}
-		case command := <-commandChannels[leader.Id]:
-			// Handle client command received on leader's command channel
-			log.Printf("Leader %d: Received command to append: %s\n", leader.Id, command)
-			leader.Log = append(leader.Log, server.LogEntry{Command: command})
-		}
-	}
-}
-
-func initialiseFollower(follower *server.Node, heartbeatChannel, commandChannel chan string) {
-	timer := time.NewTimer(follower.ElectionTimeout) // Election timer
-	defer timer.Stop()
-
-	for {
-		select {
-		case heartbeat, ok := <-heartbeatChannel:
-			if !ok {
-				// Heartbeat channel closed, meaning the leader has failed
-				log.Printf("Follower %d: Detected leader failure\n", follower.Id)
-				follower.State = server.Candidate
-				//startElection(follower, heartbeatChannel, commandChannel)
-				return
-			}
-			// if else logic in the event of empty heartbeat and heartbeat with
-			log.Printf("Follower %d: Received heartbeat %s, resetting election timer\n", follower.Id, heartbeat)
-			// ReceiveAppendEntriesRPC()
-			if !timer.Stop() {
-				<-timer.C // Drain the timer channel
-			}
-			timer.Reset(follower.ElectionTimeout)
-
-		// Process command if needed (followers might queue commands until a leader is available)
-		case command := <-commandChannel:
-			log.Printf("Follower %d: Received client command: %s\n", follower.Id, command)
-			// To forward to leader, commandChannels append?
-
-		// No heartbeat received in time, transition to candidate
-		case <-timer.C:
-			log.Printf("Follower %d: Election timeout, becoming candidate\n", follower.Id)
-			follower.State = server.Candidate
-			//startElection(follower, heartbeatChannel, commandChannel)
-			return
-		}
-	}
 }

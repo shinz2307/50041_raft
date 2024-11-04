@@ -31,6 +31,7 @@ type Node struct {
 	// Persistent states
 	CurrentTerm int
 	VotedFor    int
+	VoteCount int
 	Log         []LogEntry
 
 	// Volatile states
@@ -52,6 +53,3 @@ type Node struct {
 	mu               sync.Mutex
 }
 
-type HeartbeatArgs struct{}
-
-type HeartbeatReply struct{}
