@@ -4,7 +4,9 @@
 // RPC handling (RequestVote, AppendEntries)
 package server
 
-import "log"
+import (
+	"log"
+)
 
 // requestVote RPC request from candidate
 type requestVoteRPC struct {
@@ -17,6 +19,16 @@ type requestVoteRPC struct {
 type requestVoteReplyRPC struct {
 	term        int  // Current term of the responding node, for candidate to update if necessary
 	voteGranted bool // True if the candidate received the vote
+}
+
+// HeartbeatArgs represents the arguments for the Heartbeat RPC method
+type HeartbeatArgs struct {
+	// Include any necessary fields here
+}
+
+// HeartbeatReply represents the response from the Heartbeat RPC method
+type HeartbeatReply struct {
+	// Include any necessary fields here
 }
 
 // receiveRequestVote -- process requestVoteRPC and make decision to vote

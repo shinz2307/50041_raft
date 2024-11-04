@@ -3,6 +3,7 @@
 package server
 
 import (
+	"sync"
 	"time"
 )
 
@@ -42,7 +43,15 @@ type Node struct {
 	MatchIndex map[int]int
 
 	// RPC handling fields
-	HeartbeatTimeout time.Duration
-	ElectionTimeout  time.Duration
-	Peers            []int
+	HeartbeatInterval time.Duration
+	ElectionTimeout   time.Duration
+	Peers             []int
+
+	QuitChannel      <-chan struct{} // Channel to signal node to stop
+	resetTimeoutChan chan struct{}   // For followers to reset election timeout
+	mu               sync.Mutex
 }
+
+type HeartbeatArgs struct{}
+
+type HeartbeatReply struct{}

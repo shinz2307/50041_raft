@@ -10,13 +10,14 @@ import (
 // NewNode -- initialise a new node in the Follower state
 func NewNode(id int, peers []int) *Node {
 	return &Node{
-		Id:               id,
-		State:            Follower,
-		CurrentTerm:      0,
-		VotedFor:         -1,
-		ElectionTimeout:  time.Duration(rand.Intn(150)+150) * time.Millisecond,
-		HeartbeatTimeout: 100 * time.Millisecond,
-		Peers:            peers,
+		Id:                id,
+		State:             Follower,
+		CurrentTerm:       0,
+		VotedFor:          -1,
+		ElectionTimeout:   time.Duration(rand.Intn(150)+150) * time.Millisecond,
+		HeartbeatInterval: 100 * time.Millisecond,
+		Peers:             peers,
+		resetTimeoutChan:  make(chan struct{}, 1), // Buffered channel
 	}
 }
 
