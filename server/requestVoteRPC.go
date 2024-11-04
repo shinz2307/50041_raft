@@ -88,7 +88,7 @@ func (n *Node) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) error
 	if n.CurrentTerm > args.Term {
 		reply.VoteGranted = false
 		// log.Printf("Node %d denies vote to Node %d: current term %d is greater than candidate's term %d\n", n.Id, args.CandidateID, n.CurrentTerm, args.Term)
-	} else if (n.VotedFor == -1 || n.VotedFor == n.Id) && n.CommitIndex <= args.LastLogIndex {
+	} else if (n.VotedFor == -1 || n.VotedFor == args.CandidateID) && n.CommitIndex <= args.LastLogIndex {
 		// We take -1 as NULL
 		// We also use the last log index as a measure for "updated-ness"
 		reply.VoteGranted = true

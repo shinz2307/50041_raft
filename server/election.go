@@ -85,7 +85,7 @@ func (n *Node) StartElectionTimer() {
 	time.AfterFunc(time.Duration(timerDuration)*time.Millisecond, func() {
 		if n.State != Leader {
 			log.Printf("Node %d election timer expired, starting a new election...\n", n.Id)
-			n.StartElection()
+			// n.StartElection()
 		}
 	})
 }
