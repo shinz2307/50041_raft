@@ -47,6 +47,7 @@ type Node struct {
 	HeartbeatInterval time.Duration
 	ElectionTimeout   time.Duration
 	Peers             []int
+	CommandChannel chan string //channel for client commands
 
 	QuitChannel      <-chan struct{} // Channel to signal node to stop
 	resetTimeoutChan chan struct{}   // For followers to reset election timeout

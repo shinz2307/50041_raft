@@ -2,7 +2,7 @@
 package main
 
 import (
-	"log"
+	//"log"
 	"raft/server"
 	"time"
 )
@@ -23,12 +23,20 @@ func main() {
 		node.ElectionTimeout = electionTimeout
 		node.HeartbeatInterval = heartbeatInterval
 		node.QuitChannel = quitChannel // Channel to signal node to stop
+		
+		// Initialize fields for log replication 
+		node.Log = []server.LogEntry{} //Initial log as empty 
+		node.CurrentTerm = 1 // Initial term =1 
+		node.LeaderID = -1 // Initialize leaderID to -1 as no leader
+
 		nodes = append(nodes, node)
 		commandChannels[i] = make(chan string, 1) // Channel for client commands
+		node.CommandChannel = commandChannels[i]
 	}
 
 	// Leader node 0, Followers node 1-4
 	nodes[0].State = server.Leader
+	nodes[0].LeaderID = 0 //Set initial leaderID to its own
 
 	// Start each node in its own goroutine with its specific channel
 	for _, node := range nodes {
@@ -54,12 +62,13 @@ func main() {
 	}()
 
 	// Simulate leader failure after 5 seconds (only once)
-	go func() {
+	// Commenting out to test for appendEntries
+	/**go func() {
 		time.Sleep(5 * time.Second)
 		log.Println("Simulating leader failure for Node 0")
 		close(quitChannel) // Signal leader to stop sending heartbeats
 	}()
-
+		*/
 	// Prevent main from exiting
 	select {}
 }
