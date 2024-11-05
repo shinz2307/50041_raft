@@ -2,12 +2,17 @@
 package main
 
 import (
-	//"log"
+	"log"
 	"raft/server"
 	"time"
+	"flag"
 )
 
 func main() {
+
+	// Defining flags to control leader-failure simulation 
+	failLeader := flag.Bool("fail-leader", false, "Simulate leader failure after 5 seconds")
+	flag.Parse()
 	heartbeatInterval := 2000 * time.Millisecond
 	electionTimeout := 5 * heartbeatInterval // Election timeout is 5x heartbeat interval
 
@@ -63,12 +68,15 @@ func main() {
 
 	// Simulate leader failure after 5 seconds (only once)
 	// Commenting out to test for appendEntries
-	/**go func() {
+	if *failLeader{
+		go func() {
 		time.Sleep(5 * time.Second)
 		log.Println("Simulating leader failure for Node 0")
 		close(quitChannel) // Signal leader to stop sending heartbeats
-	}()
-		*/
+	}()}else{
+		log.Println("Leader failure simulation is disabled")
+	}
+	
 	// Prevent main from exiting
 	select {}
 }
