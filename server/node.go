@@ -54,3 +54,10 @@ type Node struct {
 	mu               sync.Mutex
 }
 
+func (n*Node) GetLog() []LogEntry{
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	logCopy := make([]LogEntry, len(n.Log))
+	copy(logCopy, n.Log)
+	return logCopy
+}
