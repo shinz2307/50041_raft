@@ -2,15 +2,15 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"raft/server"
 	"time"
-	"flag"
 )
 
 func main() {
 
-	// Defining flags to control leader-failure simulation 
+	// Defining flags to control leader-failure simulation
 	failLeader := flag.Bool("fail-leader", false, "Simulate leader failure after 5 seconds")
 	flag.Parse()
 	heartbeatInterval := 2000 * time.Millisecond
@@ -28,11 +28,11 @@ func main() {
 		node.ElectionTimeout = electionTimeout
 		node.HeartbeatInterval = heartbeatInterval
 		node.QuitChannel = quitChannel // Channel to signal node to stop
-		
-		// Initialize fields for log replication 
-		node.Log = []server.LogEntry{} //Initial log as empty 
-		node.CurrentTerm = 1 // Initial term =1 
-		node.LeaderID = -1 // Initialize leaderID to -1 as no leader
+
+		// Initialize fields for log replication
+		node.Log = []server.LogEntry{} //Initial log as empty
+		node.CurrentTerm = 1           // Initial term =1
+		node.LeaderID = -1             // Initialize leaderID to -1 as no leader
 
 		nodes = append(nodes, node)
 		commandChannels[i] = make(chan string, 1) // Channel for client commands
@@ -62,21 +62,22 @@ func main() {
 	go func() {
 		for {
 			commandChannels[0] <- "Client Command"
-			time.Sleep(2 * time.Second)
+			time.Sleep(5 * time.Second)
 		}
 	}()
 
 	// Simulate leader failure after 5 seconds (only once)
 	// Commenting out to test for appendEntries
-	if *failLeader{
+	if *failLeader {
 		go func() {
-		time.Sleep(5 * time.Second)
-		log.Println("Simulating leader failure for Node 0")
-		close(quitChannel) // Signal leader to stop sending heartbeats
-	}()}else{
+			time.Sleep(5 * time.Second)
+			log.Println("Simulating leader failure for Node 0")
+			close(quitChannel) // Signal leader to stop sending heartbeats
+		}()
+	} else {
 		log.Println("Leader failure simulation is disabled")
 	}
-	
+
 	// Prevent main from exiting
 	select {}
 }

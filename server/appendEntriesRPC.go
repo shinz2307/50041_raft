@@ -3,19 +3,21 @@
 package server
 
 import (
-	"log"
 	"fmt"
+	"log"
 	"net/rpc"
 )
 
+var successChan = make(chan bool, 100)
+
 // AppendEntriesRequest represents the request structure for the AppendEntries RPC.
 type AppendEntriesRequest struct {
-	Term         int         // Leader's term
-	LeaderID     int         // Leader's ID
-	PrevLogIndex int         // Index of log entry immediately preceding new ones
-	PrevLogTerm  int         // Term of PrevLogIndex entry
-	Entries      []LogEntry  // Log entries to store (empty for heartbeat)
-	LeaderCommit int         // Leader’s commit index
+	Term         int        // Leader's term
+	LeaderID     int        // Leader's ID
+	PrevLogIndex int        // Index of log entry immediately preceding new ones
+	PrevLogTerm  int        // Term of PrevLogIndex entry
+	Entries      []LogEntry // Log entries to store (empty for heartbeat)
+	LeaderCommit int        // Leader’s commit index
 }
 
 // AppendEntriesResponse represents the response structure for the AppendEntries RPC.
@@ -23,6 +25,7 @@ type AppendEntriesResponse struct {
 	Term    int  // Current term for leader to update itself
 	Success bool // True if follower contained entry matching PrevLogIndex and PrevLogTerm
 }
+
 // AppendEntries handles incoming AppendEntries RPC requests on followers.
 func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesResponse) error {
 	n.mu.Lock()
@@ -58,7 +61,13 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 
 	reply.Term = n.CurrentTerm
 	reply.Success = true
+	successChan <- true
 	log.Printf("Node %d appended entries from Leader %d", n.Id, args.LeaderID)
+
+	if args.LeaderCommit > n.CommitIndex {
+		n.CommitIndex = min(args.LeaderCommit, len(n.Log)-1)
+		log.Printf("Node %d has committed log index %d", n.Id, n.CommitIndex)
+	}
 	return nil
 }
 
@@ -76,6 +85,7 @@ func (n *Node) SendAppendEntries(peerID int, entries []LogEntry) {
 		PrevLogIndex: prevLogIndex,
 		PrevLogTerm:  prevLogTerm,
 		Entries:      entries,
+		LeaderCommit: n.CommitIndex,
 	}
 	n.mu.Unlock()
 
@@ -89,6 +99,7 @@ func (n *Node) SendAppendEntries(peerID int, entries []LogEntry) {
 	if reply.Success {
 		log.Printf("Leader Node %d successfully replicated entries to Node %d", n.Id, peerID)
 		// You can add additional logic here if needed
+
 	} else {
 		if reply.Term > n.CurrentTerm {
 			n.mu.Lock()
@@ -129,6 +140,19 @@ func (n *Node) HandleClientCommand(command string) {
 	n.Log = append(n.Log, entry)
 	log.Printf("Leader Node %d appended command: %s", n.Id, command)
 
+	// Goroutine to monitor successes and trigger a function on threshold
+	go func() {
+		successCount := 0
+		for range successChan {
+			successCount++
+			log.Printf("Current success counter is %d", successCount)
+			if successCount >= len(n.Peers)/2+1 {
+				n.CommitEntries()
+				successCount = 0
+			}
+		}
+	}()
+
 	// Send AppendEntries to all followers with the new entry
 	for _, peerID := range n.Peers {
 		if peerID == n.Id {
@@ -136,4 +160,16 @@ func (n *Node) HandleClientCommand(command string) {
 		}
 		go n.SendAppendEntries(peerID, []LogEntry{entry})
 	}
+}
+
+func (n *Node) CommitEntries() {
+	n.CommitIndex += 1
+	log.Printf("Commitindex is now %d", n.CommitIndex)
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

@@ -1,3 +1,6 @@
+//go:build exclude
+// +build exclude
+
 package server
 
 import (
@@ -53,12 +56,12 @@ func (n *Node) Heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 	// Handle the heartbeat reception logic
 	// For example, reset the election timeout
 	select {
-		case n.resetTimeoutChan <- struct{}{}:
-			// Election timeout reset successfully
-			log.Printf("Node %d received heartbeat\n", n.Id)
-		default:
-			// Channel was full; no action needed
-		}
+	case n.resetTimeoutChan <- struct{}{}:
+		// Election timeout reset successfully
+		log.Printf("Node %d received heartbeat\n", n.Id)
+	default:
+		// Channel was full; no action needed
+	}
 	// Optionally, you can populate the reply
 	return nil // No error occurred
 }
