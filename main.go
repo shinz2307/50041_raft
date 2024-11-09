@@ -70,8 +70,8 @@ func main() {
 					for _, node := range nodes {
 						logEntries := node.GetLog()
 						log.Printf("Node %d Log Entries:", node.Id)
-						for _, entry := range logEntries {
-							log.Printf("  Term: %d, Index: %d, Command: %v", entry.Term, entry.Index, entry.Command)
+						for i, entry := range logEntries {
+							log.Printf("  Term: %d, Index: %d, Command: %v", entry.Term, i, entry.Command)
 						}
 					}
 					log.Println("========================================")
@@ -83,10 +83,10 @@ func main() {
 	}
 	// Simulate client commands sent directly to the leader's channel
 	go func() {
-		for {
-			commandChannels[0] <- "Client Command"
-			time.Sleep(5 * time.Second)
-		}
+		//for {
+		time.Sleep(5 * time.Second)
+		commandChannels[0] <- "Client Command"
+		//}
 	}()
 
 	// Simulate leader failure after 5 seconds (only once)

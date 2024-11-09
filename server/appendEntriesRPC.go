@@ -31,6 +31,14 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
+	// Heartbeat check: If Entries is empty, it’s a heartbeat
+	if len(args.Entries) == 0 {
+		reply.Term = n.CurrentTerm
+		reply.Success = true
+		log.Printf("Node %d received heartbeat from Leader %d", n.Id, args.LeaderID)
+		return nil
+	}
+
 	// Case: If follower's term > leader's term, return false
 	if args.Term < n.CurrentTerm {
 		reply.Term = n.CurrentTerm
@@ -97,7 +105,11 @@ func (n *Node) SendAppendEntries(peerID int, entries []LogEntry) {
 	}
 
 	if reply.Success {
-		log.Printf("Leader Node %d successfully replicated entries to Node %d", n.Id, peerID)
+		if len(args.Entries) == 0 {
+			//log.Printf("Leader Node has sent heartbeat to Node %d", peerID)
+		} else {
+			log.Printf("Leader Node %d successfully replicated entries to Node %d", n.Id, peerID)
+		}
 		// You can add additional logic here if needed
 
 	} else {
@@ -125,6 +137,17 @@ func (n *Node) CallAppendEntriesRPC(peerID int, args *AppendEntriesRequest, repl
 
 	serviceName := fmt.Sprintf("Node%d", peerID)
 	return client.Call(serviceName+".AppendEntries", args, reply)
+}
+
+// SendHeartbeats sends an empty AppendEntries RPC to all followers as a heartbeat.
+func (n *Node) SendHeartbeats() {
+	for _, peerID := range n.Peers {
+		if peerID == n.Id {
+			continue // Skip self
+		}
+		// Send an empty AppendEntries request (heartbeat) to the follower
+		go n.SendAppendEntries(peerID, []LogEntry{}) // No entries means this is a heartbeat
+	}
 }
 
 // HandleClientCommand processes a client command received by the leader.

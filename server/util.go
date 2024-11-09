@@ -24,7 +24,7 @@ func (n *Node) RunAsLeader() {
 		select {
 		// Every tick, send heartbeat
 		case <-ticker.C:
-			//n.SendHeartbeats()
+			n.SendHeartbeats()
 		case command := <-n.CommandChannel:
 			log.Printf("Leader Node %d received client command: %s\n", n.Id, command)
 			n.HandleClientCommand(command)
@@ -49,7 +49,7 @@ func (n *Node) RunAsFollower() {
 			// Remember to also set the n.LeaderID from heartbeat (consider case of new leader)
 		case <-time.After(electionTimeout):
 			log.Printf("Node %d election timeout. Becoming candidate.\n", n.Id)
-			n.StartElection()
+			//n.StartElection()
 
 			return
 		}
