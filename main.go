@@ -6,6 +6,7 @@ import (
 	"log"
 	"raft/server"
 	"time"
+	"fmt"
 )
 
 func main() {
@@ -82,19 +83,27 @@ func main() {
 		}()
 	}
 	// Simulate client commands sent directly to the leader's channel
-	go func() {
-		//for {
-		time.Sleep(5 * time.Second)
-		commandChannels[0] <- "Client Command"
-		//}
-	}()
+	if !*failLeader {
+		go func() {
+			commandCounter :=1
+
+			for {
+			time.Sleep(3 * time.Second)
+			log.Printf("========== Incoming Client command =========\n")
+
+			command :=fmt.Sprintf("Client Command %d", commandCounter)
+			commandChannels[0] <- command
+			commandCounter ++
+			}
+		}()
+	}
 
 	// Simulate leader failure after 5 seconds (only once)
 	// Added a flag to simulate leader failure. To run "go run main.go -fail-leader=true"
 	if *failLeader {
 		go func() {
 			time.Sleep(5 * time.Second)
-			log.Println("Simulating leader failure for Node 0")
+			log.Println("========= Simulating leader failure for Node 0 ============ \n")
 			close(quitChannel) // Signal leader to stop sending heartbeats
 		}()
 	} else {
