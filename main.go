@@ -57,7 +57,30 @@ func main() {
 			}(node)
 		}
 	}
+	// Goroutine to print logs periodically
+	if !*failLeader {
 
+		go func() {
+			ticker := time.NewTicker(5 * time.Second) // Adjust the interval as needed
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ticker.C:
+					log.Println("=== Snapshot of Logs from All Nodes ===")
+					for _, node := range nodes {
+						logEntries := node.GetLog()
+						log.Printf("Node %d Log Entries:", node.Id)
+						for _, entry := range logEntries {
+							log.Printf("  Term: %d, Index: %d, Command: %v", entry.Term, entry.Index, entry.Command)
+						}
+					}
+					log.Println("========================================")
+				case <-quitChannel:
+					return
+				}
+			}
+		}()
+	}
 	// Simulate client commands sent directly to the leader's channel
 	go func() {
 		for {
@@ -67,7 +90,7 @@ func main() {
 	}()
 
 	// Simulate leader failure after 5 seconds (only once)
-	// Commenting out to test for appendEntries
+	// Added a flag to simulate leader failure. To run "go run main.go -fail-leader=true"
 	if *failLeader {
 		go func() {
 			time.Sleep(5 * time.Second)
