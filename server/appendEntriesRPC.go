@@ -54,6 +54,9 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 		n.LeaderID = args.LeaderID
 	}
 	
+	//TODO Case: Consistency check 
+	// If n's log doesn't contain an entry at args.prevLogIndex whose term matches args.prevLogTerm, return False
+	
 
 	// Append any new entries not already in the log
 	for i, entry := range args.Entries {
