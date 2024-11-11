@@ -42,7 +42,6 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 	// Case: If follower's term > leader's term, return false
 	if args.Term < n.CurrentTerm {
 		log.Printf("Node %d's term: %d > Leader node %d's term: %d ", n.Id, n.CurrentTerm, args.LeaderID, args.Term)
-		reply.Term = n.CurrentTerm
 		reply.Success = false
 		return nil
 	}

@@ -37,8 +37,9 @@ func main() {
 		node.LeaderID = -1             // Initialize leaderID to -1 as no leader
 
 		 // Check for inconsistent logs scenario
-		 if *case1FollowerTermHigher && i == 1 {
+		if *case1FollowerTermHigher && i == 1 {
 			// Initialize follower node 1 with inconsistent logs
+			log.Printf("Node %d initialized with inconsistent logs", i)
 			node.CurrentTerm = 3
 			node.Log = []server.LogEntry{
 				{Term: 1, Command: "Old Command 1"},
