@@ -35,12 +35,13 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 	if len(args.Entries) == 0 {
 		reply.Term = n.CurrentTerm
 		reply.Success = true
-		log.Printf("Node %d received heartbeat from Leader %d", n.Id, args.LeaderID)
+		//log.Printf("Node %d received heartbeat from Leader %d", n.Id, args.LeaderID)
 		return nil
 	}
 
 	// Case: If follower's term > leader's term, return false
 	if args.Term < n.CurrentTerm {
+		log.Printf("Node %d's term: %d > Leader node %d's term: %d ", n.Id, n.CurrentTerm, args.LeaderID, args.Term)
 		reply.Term = n.CurrentTerm
 		reply.Success = false
 		return nil
@@ -52,6 +53,7 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 		n.State = Follower
 		n.LeaderID = args.LeaderID
 	}
+	
 
 	// Append any new entries not already in the log
 	for i, entry := range args.Entries {
@@ -70,11 +72,11 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 	reply.Term = n.CurrentTerm
 	reply.Success = true
 	successChan <- true
-	log.Printf("Node %d appended entries from Leader %d", n.Id, args.LeaderID)
+	//log.Printf("Node %d appended entries from Leader %d", n.Id, args.LeaderID)
 
 	if args.LeaderCommit > n.CommitIndex {
 		n.CommitIndex = min(args.LeaderCommit, len(n.Log)-1)
-		log.Printf("Node %d has committed log index %d", n.Id, n.CommitIndex)
+		//log.Printf("Node %d has committed log index %d", n.Id, n.CommitIndex)
 	}
 	return nil
 }
@@ -108,12 +110,13 @@ func (n *Node) SendAppendEntries(peerID int, entries []LogEntry) {
 		if len(args.Entries) == 0 {
 			//log.Printf("Leader Node has sent heartbeat to Node %d", peerID)
 		} else {
-			log.Printf("Leader Node %d successfully replicated entries to Node %d", n.Id, peerID)
+			//log.Printf("Leader Node %d successfully replicated entries to Node %d", n.Id, peerID)
 		}
 		// You can add additional logic here if needed
 
 	} else {
 		if reply.Term > n.CurrentTerm {
+			log.Printf("Leader Node %d detected term inconsistency with Node %d", n.Id, peerID)
 			n.mu.Lock()
 			n.CurrentTerm = reply.Term
 			n.State = Follower

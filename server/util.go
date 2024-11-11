@@ -48,8 +48,8 @@ func (n *Node) RunAsFollower() {
 			// Received heartbeat, reset election timeout
 			// Remember to also set the n.LeaderID from heartbeat (consider case of new leader)
 		case <-time.After(electionTimeout):
-			log.Printf("Node %d election timeout. Becoming candidate.\n", n.Id)
-			n.StartElection()
+			//log.Printf("Node %d election timeout. Becoming candidate.\n", n.Id)
+			//n.StartElection()
 
 			return
 		}
