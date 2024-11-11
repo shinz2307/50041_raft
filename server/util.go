@@ -25,6 +25,9 @@ func (n *Node) RunAsLeader() {
 		// Every tick, send heartbeat
 		case <-ticker.C:
 			n.SendHeartbeats()
+		case command := <-n.CommandChannel:
+			log.Printf("Leader Node %d received client command: %s\n", n.Id, command)
+			n.HandleClientCommand(command)
 		case <-n.QuitChannel:
 			log.Printf("Leader Node %d is stopping\n", n.Id)
 			return
@@ -53,11 +56,10 @@ func (n *Node) RunAsFollower() {
 	}
 }
 
-
 func (n *Node) StartRPCServer() {
-	log.Printf("Node %d is attempting to register\n", n.Id)
+	log.Printf("Node %d is attempting to register RPC\n", n.Id)
 
-	// Since we are using the same struct, we need to create new server to register the RPC 
+	// Since we are using the same struct, we need to create new server to register the RPC
 	server := rpc.NewServer() // Create a new server for each node
 	nodeServiceName := fmt.Sprintf("Node%d", n.Id)
 	if err := server.RegisterName(nodeServiceName, n); err != nil {
@@ -70,16 +72,16 @@ func (n *Node) StartRPCServer() {
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("Node %d failed to listen: %v\n", n.Id, err)
-	} 
+	}
 
 	defer listener.Close()
 	log.Printf("Node %d listening on %v...\n", n.Id, address)
 	for {
-        conn, err := listener.Accept()
-        if err != nil {
-            log.Printf("Failed to accept connection: %v", err)
-            continue
-        }
-        go server.ServeConn(conn)
-    }
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Printf("Failed to accept connection: %v", err)
+			continue
+		}
+		go server.ServeConn(conn)
+	}
 }

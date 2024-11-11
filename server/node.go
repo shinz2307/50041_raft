@@ -47,9 +47,17 @@ type Node struct {
 	HeartbeatInterval time.Duration
 	ElectionTimeout   time.Duration
 	Peers             []int
+	CommandChannel chan string //channel for client commands
 
 	QuitChannel      <-chan struct{} // Channel to signal node to stop
 	resetTimeoutChan chan struct{}   // For followers to reset election timeout
 	mu               sync.Mutex
 }
 
+func (n*Node) GetLog() []LogEntry{
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	logCopy := make([]LogEntry, len(n.Log))
+	copy(logCopy, n.Log)
+	return logCopy
+}

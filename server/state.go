@@ -37,7 +37,7 @@ func (n *Node) BecomeLeader() {
 		n.LeaderID = n.Id
 		// Start sending heartbeats to maintain leadership
 		// TODO: For now; i enabled the following but maybe we need an automatic way to send out heartbeats
-		n.SendHeartbeats()
+		//n.SendHeartbeats()
 	}
 	n.VoteCount = 0
 }
