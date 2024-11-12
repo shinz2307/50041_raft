@@ -3,10 +3,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"raft/server"
 	"time"
-	"fmt"
 )
 
 func main() {
@@ -14,8 +14,6 @@ func main() {
 	// Defining flags to control leader-failure simulation
 	failLeader := flag.Bool("fail-leader", false, "Simulate leader failure after 5 seconds")
 	flag.Parse()
-	heartbeatInterval := 2000 * time.Millisecond
-	electionTimeout := 5 * heartbeatInterval // Election timeout is 5x heartbeat interval
 
 	// Define channels for each node
 	commandChannels := make(map[int]chan string)
@@ -26,8 +24,7 @@ func main() {
 
 	for i := 0; i < 5; i++ {
 		node := server.NewNode(i, []int{0, 1, 2, 3, 4})
-		node.ElectionTimeout = electionTimeout
-		node.HeartbeatInterval = heartbeatInterval
+		node.SetTimeoutOrHeartbeatInterval() // Auto set timeout based on node's state
 		node.QuitChannel = quitChannel // Channel to signal node to stop
 
 		// Initialize fields for log replication
@@ -40,23 +37,16 @@ func main() {
 		node.CommandChannel = commandChannels[i]
 	}
 
-	// Leader node 0, Followers node 1-4
-	nodes[0].State = server.Leader
-	nodes[0].LeaderID = 0 //Set initial leaderID to its own
+	// Do not decide on leader node first. Everyone starts as follower
 
 	// Start each node in its own goroutine with its specific channel
 	for _, node := range nodes {
-		if node.State == server.Leader {
-			// Initialize as leader
-			go func(n *server.Node) {
-				n.RunAsLeader()
-			}(node)
-		} else {
-			// Initialize as follower
-			go func(n *server.Node) {
-				n.RunAsFollower()
-			}(node)
-		}
+
+		go node.StartRPCServer()
+
+		go func(n *server.Node) {
+			n.RunAsFollower()
+		}(node)
 	}
 	// Goroutine to print logs periodically
 	if !*failLeader {

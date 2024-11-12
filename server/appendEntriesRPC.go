@@ -27,15 +27,17 @@ type AppendEntriesResponse struct {
 }
 
 // AppendEntries handles incoming AppendEntries RPC requests on followers.
+// This implements receive-heartbeat functionality (of receiving node).
 func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesResponse) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
-	// Heartbeat check: If Entries is empty, it’s a heartbeat
+	// Heartbeat check: If Entries is empty, it is a heartbeat
 	if len(args.Entries) == 0 {
 		reply.Term = n.CurrentTerm
 		reply.Success = true
 		log.Printf("Node %d received heartbeat from Leader %d", n.Id, args.LeaderID)
+		n.ResetStopwatchStartTime()
 		return nil
 	}
 
