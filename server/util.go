@@ -17,6 +17,9 @@ func (n *Node) RunAsLeader() {
 	// maybe add delay?
 	time.Sleep(2 * time.Second)
 
+	go n.InitializeNextIndex(n.Peers)
+	log.Printf("Leader Node %d initialized NextIndex: %v\n", n.Id, n.NextIndex)
+	
 	ticker := time.NewTicker(n.HeartbeatInterval)
 	defer ticker.Stop()
 
@@ -39,6 +42,7 @@ func (n *Node) RunAsFollower() {
 	log.Printf("Node %d is running as Follower\n", n.Id)
 
 	go n.StartRPCServer()
+	
 
 	for {
 		electionTimeout := n.ElectionTimeout
@@ -57,7 +61,7 @@ func (n *Node) RunAsFollower() {
 }
 
 func (n *Node) StartRPCServer() {
-	log.Printf("Node %d is attempting to register RPC\n", n.Id)
+	//log.Printf("Node %d is attempting to register RPC\n", n.Id)
 
 	// Since we are using the same struct, we need to create new server to register the RPC
 	server := rpc.NewServer() // Create a new server for each node
@@ -68,7 +72,7 @@ func (n *Node) StartRPCServer() {
 
 	// generate port number attach listener to address
 	address := fmt.Sprintf("localhost:%d", 8000+n.Id)
-	log.Printf("Node %d trying to listen on %v...\n", n.Id, address)
+	//log.Printf("Node %d trying to listen on %v...\n", n.Id, address)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("Node %d failed to listen: %v\n", n.Id, err)
@@ -83,5 +87,12 @@ func (n *Node) StartRPCServer() {
 			continue
 		}
 		go server.ServeConn(conn)
+	}
+}
+
+func (n *Node) InitializeNextIndex(peers []int) {
+	n.NextIndex = make(map[int]int)
+	for _, peerID := range peers {
+		n.NextIndex[peerID] = len(n.Log)
 	}
 }

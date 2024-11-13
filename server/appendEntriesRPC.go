@@ -47,88 +47,98 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 		return nil
 	}
 
-	// Follower updates the term to match leader and becomes a follower (if it was a candidate)
-	if args.Term > n.CurrentTerm {
-		n.CurrentTerm = args.Term
-		n.State = Follower
-		n.LeaderID = args.LeaderID
+	
+	
+	// Consistency check 
+	// 1. Check if node has a log entry at index = prevLogIndex
+	if args.PrevLogIndex >= 0 && args.PrevLogIndex < len(n.Log){
+		// 2. Check if nodes entry at prevLogIndex has the same term as PrevLogTerm
+		if n.Log[args.PrevLogIndex].Term == args.PrevLogTerm{
+			log.Printf("Node %d passed consistency check.", n.Id, )
+		}else{
+			log.Printf("Node %d failed second consistency check of the term comparison. It has log entries %d", n.Id, n.Log)
+			reply.Term = n.CurrentTerm
+			reply.Success = false
+			return nil
+		}		
+	}else if args.PrevLogIndex == -1{
+		log.Printf("Node %d is appending the first entry. PrevLogIndex is: %d. It has log entries %d", n.Id, args.PrevLogIndex, n.Log)
+		
+		}else{
+		log.Printf("Node %d failed first consistency check of having a prev log entry. PrevLogIndex is: %d. It has log entries %d", n.Id, args.PrevLogIndex, n.Log)
+		reply.Term = n.CurrentTerm
+		reply.Success = false
+		return nil
 	}
 	
-	//TODO Case: Consistency check 
-	// If n's log doesn't contain an entry at args.prevLogIndex whose term matches args.prevLogTerm, return False
-	
-
-	// Append any new entries not already in the log
-	for i, entry := range args.Entries {
-		index := args.PrevLogIndex + 1 + i
-		if index < len(n.Log) {
-			if n.Log[index].Term != entry.Term {
-				// Conflict detected, delete the existing entry and all that follow it
-				n.Log = n.Log[:index]
-				n.Log = append(n.Log, entry)
-			}
-		} else {
-			n.Log = append(n.Log, entry)
-		}
-	}
-
-	reply.Term = n.CurrentTerm
-	reply.Success = true
-	successChan <- true
-	//log.Printf("Node %d appended entries from Leader %d", n.Id, args.LeaderID)
+	// TODO: Append new entries to the followers log 
+	// If it gets here, it means follower passed the consistency check
+	n.Log = append(n.Log,args.Entries...)
 
 	if args.LeaderCommit > n.CommitIndex {
 		n.CommitIndex = min(args.LeaderCommit, len(n.Log)-1)
 		//log.Printf("Node %d has committed log index %d", n.Id, n.CommitIndex)
 	}
+
+	
+
+	reply.Term = n.CurrentTerm
+	reply.Success = true
+	successChan <- true
+	log.Printf("Node %d successfully appended entries", n.Id)
+
+	
 	return nil
 }
 
 // SendAppendEntries sends AppendEntries RPC to a specific follower.
-func (n *Node) SendAppendEntries(peerID int, entries []LogEntry) {
-	n.mu.Lock()
-	prevLogIndex := len(n.Log) - 1
-	prevLogTerm := 0
-	if prevLogIndex >= 0 {
-		prevLogTerm = n.Log[prevLogIndex].Term
+func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) {
+	leader.mu.Lock()
+
+	var prevLogIndex, prevLogTerm int
+	if len(leader.Log) > 0 {
+		prevLogIndex = leader.NextIndex[peerID] - 1
+		if prevLogIndex >= 0 {
+			prevLogTerm = leader.Log[prevLogIndex].Term
+		}
 	}
+	
+	if len(entries) !=0{ // If it is not a heartbeat
+		entries = leader.Log[leader.NextIndex[peerID]:]
+		}
+	
+
+
 	args := &AppendEntriesRequest{
-		Term:         n.CurrentTerm,
-		LeaderID:     n.Id,
+		Term:         leader.CurrentTerm,
+		LeaderID:     leader.Id,
 		PrevLogIndex: prevLogIndex,
 		PrevLogTerm:  prevLogTerm,
 		Entries:      entries,
-		LeaderCommit: n.CommitIndex,
+		LeaderCommit: leader.CommitIndex,
 	}
-	n.mu.Unlock()
+	leader.mu.Unlock()
 
 	var reply AppendEntriesResponse
-	err := n.CallAppendEntriesRPC(peerID, args, &reply)
+	err := leader.CallAppendEntriesRPC(peerID, args, &reply)
 	if err != nil {
-		log.Printf("Leader Node %d failed to send AppendEntries to Node %d: %v\n", n.Id, peerID, err)
+		log.Printf("Leader Node %d failed to send AppendEntries to Node %d: %v\n", leader.Id, peerID, err)
 		return
 	}
 
+	// Handle Success
+	//Update NextIndex and MatchIndex 
+	//leader.NextIndex[n.Id] = len(n.Log)
 	if reply.Success {
 		if len(args.Entries) == 0 {
-			//log.Printf("Leader Node has sent heartbeat to Node %d", peerID)
+			log.Printf("Leader Node has sent heartbeat to Node %d", peerID)
 		} else {
-			//log.Printf("Leader Node %d successfully replicated entries to Node %d", n.Id, peerID)
+			log.Printf("Leader Node %d successfully replicated entries to Node %d", leader.Id, peerID)
+			log.Printf("Peer id: %d. Leader's nextIndex: %v.Length of leader log: %d", peerID, leader.NextIndex,len(leader.Log))
+			leader.NextIndex[peerID]=len(leader.Log)
 		}
-		// You can add additional logic here if needed
-
-	} else {
-		if reply.Term > n.CurrentTerm {
-			log.Printf("Leader Node %d detected term inconsistency with Node %d", n.Id, peerID)
-			n.mu.Lock()
-			n.CurrentTerm = reply.Term
-			n.State = Follower
-			n.LeaderID = -1
-			n.mu.Unlock()
-		} else {
-			// Handle log inconsistency, possibly retry or adjust nextIndex
-			log.Printf("Leader Node %d detected log inconsistency with Node %d", n.Id, peerID)
-		}
+	} else{ //Reply.Success = fail
+		log.Printf("reply.Success = fail")
 	}
 }
 
@@ -187,7 +197,7 @@ func (n *Node) HandleClientCommand(command string) {
 		if peerID == n.Id {
 			continue // Skip sending to self
 		}
-		go n.SendAppendEntries(peerID, []LogEntry{entry})
+		go n.SendAppendEntries(peerID, n.Log)
 	}
 }
 
