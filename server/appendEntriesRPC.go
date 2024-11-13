@@ -52,24 +52,17 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 		n.State = Follower
 		n.LeaderID = args.LeaderID
 	}
-	
-	//TODO Case: Consistency check 
-	// If n's log doesn't contain an entry at args.prevLogIndex whose term matches args.prevLogTerm, return False
-	
 
-	// Append any new entries not already in the log
-	for i, entry := range args.Entries {
-		index := args.PrevLogIndex + 1 + i
-		if index < len(n.Log) {
-			if n.Log[index].Term != entry.Term {
-				// Conflict detected, delete the existing entry and all that follow it
-				n.Log = n.Log[:index]
-				n.Log = append(n.Log, entry)
-			}
-		} else {
-			n.Log = append(n.Log, entry)
-		}
+	//TODO Case: Consistency check
+	// If n's log doesn't contain an entry at args.prevLogIndex whose term matches args.prevLogTerm, return False
+	// Check for no entry
+	if n.Log[args.PrevLogIndex] != args.Entries[0] {
+		n.Log = n.Log[:args.PrevLogIndex]
+		reply.Success = false
+		return nil
 	}
+
+	//TODO Append any new entries not already in the log
 
 	reply.Term = n.CurrentTerm
 	reply.Success = true
