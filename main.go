@@ -3,10 +3,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"raft/server"
 	"time"
-	"fmt"
 )
 
 func main() {
@@ -14,7 +14,7 @@ func main() {
 	// Defining flags to control leader-failure simulation
 	failLeader := flag.Bool("fail-leader", false, "Simulate leader failure after 5 seconds")
 	flag.Parse()
-	heartbeatInterval := 2000 * time.Millisecond
+	heartbeatInterval := 5000 * time.Millisecond
 	electionTimeout := 5 * heartbeatInterval // Election timeout is 5x heartbeat interval
 
 	// Define channels for each node
@@ -26,6 +26,8 @@ func main() {
 
 	for i := 0; i < 5; i++ {
 		node := server.NewNode(i, []int{0, 1, 2, 3, 4})
+		// different from the election timeout in election.go, this is for heartbeat detection,
+		// that election timeout is for requestVoteRPC
 		node.ElectionTimeout = electionTimeout
 		node.HeartbeatInterval = heartbeatInterval
 		node.QuitChannel = quitChannel // Channel to signal node to stop
@@ -85,15 +87,15 @@ func main() {
 	// Simulate client commands sent directly to the leader's channel
 	if !*failLeader {
 		go func() {
-			commandCounter :=1
+			commandCounter := 1
 
 			for {
-			time.Sleep(3 * time.Second)
-			log.Printf("========== Incoming Client command =========\n")
-
-			command :=fmt.Sprintf("Client Command %d", commandCounter)
-			commandChannels[0] <- command
-			commandCounter ++
+				time.Sleep(3 * time.Second)
+				log.Printf("========== Incoming Client command =========\n")
+				command := fmt.Sprintf("Client Command %d", commandCounter)
+				// Entry point for client command
+				commandChannels[0] <- command
+				commandCounter++
 			}
 		}()
 	}

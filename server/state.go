@@ -14,7 +14,7 @@ func NewNode(id int, peers []int) *Node {
 		State:             Follower,
 		CurrentTerm:       0,
 		VotedFor:          -1,
-		ElectionTimeout:   time.Duration(rand.Intn(150)+150) * time.Millisecond,
+		ElectionTimeout:   time.Duration(rand.Intn(maxElectionTimeout-minElectionTimeout)+minElectionTimeout) * time.Millisecond,
 		HeartbeatInterval: 100 * time.Millisecond,
 		Peers:             peers,
 		resetTimeoutChan:  make(chan struct{}, 1), // Buffered channel

@@ -56,27 +56,21 @@ func (n *Node) CountVote(reply *RequestVoteReply) {
 	// If timer runs out:
 	// n.startElection(): return -1
 
-
-
-
 	// So if the incoming reply is from a more updated node, this node transits to follower
 	if reply.Term > n.CurrentTerm {
 		n.BecomeFollower(reply.Term)
 		return
 	}
 
-
-
 	if reply.VoteGranted {
-		n.VoteCount++ 
+		n.VoteCount++
 
 		if n.VoteCount > len(n.Peers)/2 {
 			log.Printf("Node %d has received a majority of votes and is now the leader!\n", n.Id)
-			n.BecomeLeader() 
+			n.BecomeLeader()
 			return
 		}
 	}
-	
 
 }
 

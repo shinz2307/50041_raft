@@ -26,6 +26,7 @@ func (n *Node) RunAsLeader() {
 		case <-ticker.C:
 			n.SendHeartbeats()
 		case command := <-n.CommandChannel:
+			// Entry point for client command
 			log.Printf("Leader Node %d received client command: %s\n", n.Id, command)
 			n.HandleClientCommand(command)
 		case <-n.QuitChannel:

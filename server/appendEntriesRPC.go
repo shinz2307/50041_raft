@@ -81,6 +81,7 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 
 // SendAppendEntries sends AppendEntries RPC to a specific follower.
 func (n *Node) SendAppendEntries(peerID int, entries []LogEntry) {
+	// Entry point for calling
 	n.mu.Lock()
 	prevLogIndex := len(n.Log) - 1
 	prevLogTerm := 0
@@ -170,6 +171,7 @@ func (n *Node) HandleClientCommand(command string) {
 			successCount++
 			log.Printf("Current success counter is %d", successCount)
 			if successCount >= len(n.Peers)/2+1 {
+				// Commit entries number of replies is more than half
 				n.CommitEntries()
 				successCount = 0
 			}
