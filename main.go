@@ -16,11 +16,12 @@ func main() {
 	flag.Parse()
 
 	// Define channels for each node
-	commandChannels := make(map[int]chan string)
 	quitChannel := make(chan struct{}) // Channel to signal leader failure
 
 	// Initialize 1 leader and 4 followers
 	var nodes []*server.Node
+
+	commandChannel := make(chan string, 1)
 
 	for i := 0; i < 5; i++ {
 		node := server.NewNode(i, []int{0, 1, 2, 3, 4})
@@ -33,8 +34,7 @@ func main() {
 		node.LeaderID = -1             // Initialize leaderID to -1 as no leader
 
 		nodes = append(nodes, node)
-		commandChannels[i] = make(chan string, 1) // Channel for client commands
-		node.CommandChannel = commandChannels[i]
+		node.CommandChannel = commandChannel
 	}
 
 	// Do not decide on leader node first. Everyone starts as follower
@@ -50,7 +50,6 @@ func main() {
 	}
 	// Goroutine to print logs periodically
 	if !*failLeader {
-
 		go func() {
 			ticker := time.NewTicker(5 * time.Second) // Adjust the interval as needed
 			defer ticker.Stop()
@@ -78,11 +77,12 @@ func main() {
 			commandCounter := 1
 
 			for {
-				time.Sleep(3 * time.Second)
+				time.Sleep(10 * time.Second)
 				log.Printf("========== Incoming Client command =========\n")
 				command := fmt.Sprintf("Client Command %d", commandCounter)
 				// Entry point for client command
-				commandChannels[0] <- command
+				log.Printf("Client Command %d", commandCounter)
+				commandChannel <- command
 				commandCounter++
 			}
 		}()

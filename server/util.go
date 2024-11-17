@@ -16,17 +16,17 @@ func (n *Node) RunAsLeader() {
 	n.BeginStateTimer() // Then periodically will send out heartbeats
 	// The following is purely for receiving messages
 	// heartbeat and timeout is sent / handled automatically by RestartStateTimer
-	// for {
-	// 	select {
-	// 		case command := <-n.CommandChannel:
-	// 			log.Printf("Leader Node %d received client command: %s\n", n.Id, command)
-	// 			n.HandleClientCommand(command)
-	// 		case <-n.QuitChannel:
-	// 			log.Printf("Leader Node %d is stopping\n", n.Id)
-	// 			return
-	// 	}
-	// }
-	select {}
+	for {
+		log.Printf("Node %d is now listening for client commands\n", n.Id)
+		select {
+		case command := <-n.CommandChannel:
+			log.Printf("Leader Node %d received client command: %s\n", n.Id, command)
+			n.HandleClientCommand(command)
+		case <-n.QuitChannel:
+			log.Printf("Leader Node %d is stopping\n", n.Id)
+			return
+		}
+	}
 }
 
 func (n *Node) RunAsFollower() {
