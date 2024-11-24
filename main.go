@@ -13,7 +13,6 @@ func main() {
 
 	// Defining flags to control leader-failure simulation
 	failLeader := flag.Bool("fail-leader", false, "Simulate leader failure after 5 seconds")
-	case1FollowerTermHigher := flag.Bool("case1-followerTermHigher", false, "Simulate one follower with higher term")
 	flag.Parse()
 	heartbeatInterval := 2000 * time.Millisecond
 	electionTimeout := 5 * heartbeatInterval // Election timeout is 5x heartbeat interval
@@ -35,18 +34,6 @@ func main() {
 		node.Log = []server.LogEntry{} //Initial log as empty
 		node.CurrentTerm = 1           // Initial term =1
 		node.LeaderID = -1             // Initialize leaderID to -1 as no leader
-
-		 // Check for inconsistent logs scenario
-		 if *case1FollowerTermHigher && i == 1 {
-			// Initialize follower node 1 with inconsistent logs
-			node.CurrentTerm = 3
-			node.Log = []server.LogEntry{
-				{Term: 1, Command: "Old Command 1"},
-				{Term: 3, Command: "Old Command 2"},
-				{Term: 3, Command: "Old Command 3"},
-			}
-			log.Printf("Node %d initialized with inconsistent logs", i)
-		}
 
 		nodes = append(nodes, node)
 		commandChannels[i] = make(chan string, 1) // Channel for client commands

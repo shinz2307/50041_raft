@@ -41,7 +41,7 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 
 	// Case: If follower's term > leader's term, return false
 	if args.Term < n.CurrentTerm {
-		log.Printf("Node %d's term: %d > Leader node %d's term: %d ", n.Id, n.CurrentTerm, args.LeaderID, args.Term)
+		log.Printf("TODO: LEADER TRANSITION TO CANDIDATE. Node %d's term: %d > Leader node %d's term: %d ", n.Id, n.CurrentTerm, args.LeaderID, args.Term)
 		reply.Term = n.CurrentTerm
 		reply.Success = false
 		return nil
@@ -51,21 +51,21 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 	
 	// Consistency check 
 	// 1. Check if node has a log entry at index = prevLogIndex
-	if args.PrevLogIndex >= 0 && args.PrevLogIndex < len(n.Log){
+	if args.PrevLogIndex > 0 && args.PrevLogIndex < len(n.Log){
 		// 2. Check if nodes entry at prevLogIndex has the same term as PrevLogTerm
 		if n.Log[args.PrevLogIndex].Term == args.PrevLogTerm{
 			log.Printf("Node %d passed consistency check.", n.Id, )
 		}else{
-			log.Printf("Node %d failed second consistency check of the term comparison. It has log entries %d", n.Id, n.Log)
+			log.Printf("Node %d failed second consistency check of the term comparison.", n.Id)
 			reply.Term = n.CurrentTerm
 			reply.Success = false
 			return nil
 		}		
-	}else if args.PrevLogIndex == -1{
-		log.Printf("Node %d is appending the first entry. PrevLogIndex is: %d. It has log entries %d", n.Id, args.PrevLogIndex, n.Log)
+	}else if args.PrevLogIndex == 0{
+		log.Printf("Node %d is appending the first entry. PrevLogIndex is: %d.", n.Id, args.PrevLogIndex)
 		
 		}else{
-		log.Printf("Node %d failed first consistency check of having a prev log entry. PrevLogIndex is: %d. It has log entries %d", n.Id, args.PrevLogIndex, n.Log)
+		log.Printf("Node %d failed first consistency check of having a prev log entry. PrevLogIndex is: %d. ", n.Id, args.PrevLogIndex)
 		reply.Term = n.CurrentTerm
 		reply.Success = false
 		return nil
@@ -85,7 +85,7 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 	reply.Term = n.CurrentTerm
 	reply.Success = true
 	successChan <- true
-	log.Printf("Node %d successfully appended entries", n.Id)
+	//log.Printf("Node %d successfully appended entries", n.Id)
 
 	
 	return nil
@@ -94,9 +94,13 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 // SendAppendEntries sends AppendEntries RPC to a specific follower.
 func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) {
 	leader.mu.Lock()
+	log.Printf(" Leader %d's nextIndex: %v.", peerID, leader.NextIndex)
 
 	var prevLogIndex, prevLogTerm int
-	if len(leader.Log) > 0 {
+	if leader.NextIndex[peerID] == 0{
+		prevLogIndex = 0
+		prevLogTerm = 0
+	}else{
 		prevLogIndex = leader.NextIndex[peerID] - 1
 		if prevLogIndex >= 0 {
 			prevLogTerm = leader.Log[prevLogIndex].Term
@@ -126,18 +130,17 @@ func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) {
 		return
 	}
 
-	// Handle Success
-	//Update NextIndex and MatchIndex 
-	//leader.NextIndex[n.Id] = len(n.Log)
+	// Handle Success Update NextIndex and MatchIndex 
 	if reply.Success {
 		if len(args.Entries) == 0 {
-			log.Printf("Leader Node has sent heartbeat to Node %d", peerID)
+			//log.Printf("Leader Node has sent heartbeat to Node %d", peerID)
 		} else {
-			log.Printf("Leader Node %d successfully replicated entries to Node %d", leader.Id, peerID)
-			log.Printf("Peer id: %d. Leader's nextIndex: %v.Length of leader log: %d", peerID, leader.NextIndex,len(leader.Log))
+			//log.Printf("Leader Node %d successfully replicated entries to Node %d", leader.Id, peerID)
 			leader.NextIndex[peerID]=len(leader.Log)
+			
+
 		}
-	} else{ //Reply.Success = fail
+	} else{ //Handle Failure
 		log.Printf("reply.Success = fail")
 	}
 }
@@ -184,7 +187,7 @@ func (n *Node) HandleClientCommand(command string) {
 		successCount := 0
 		for range successChan {
 			successCount++
-			log.Printf("Current success counter is %d", successCount)
+			//log.Printf("Current success counter is %d", successCount)
 			if successCount >= len(n.Peers)/2+1 {
 				n.CommitEntries()
 				successCount = 0
@@ -203,7 +206,7 @@ func (n *Node) HandleClientCommand(command string) {
 
 func (n *Node) CommitEntries() {
 	n.CommitIndex += 1
-	log.Printf("Commitindex is now %d", n.CommitIndex)
+	//log.Printf("Commitindex is now %d", n.CommitIndex)
 }
 
 func min(a, b int) int {
