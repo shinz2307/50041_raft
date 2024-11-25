@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/rpc"
+	"raft/shared"
 	"time"
 )
 
@@ -17,9 +18,11 @@ func (n *Node) RunAsLeader() {
 	// maybe add delay?
 	time.Sleep(2 * time.Second)
 
-	go n.InitializeNextIndex(n.Peers)
+	if !*shared.NewLeader {
+		go n.InitializeNextIndex(n.Peers)
+	}
 	log.Printf("Leader Node %d initialized NextIndex: %v\n", n.Id, n.NextIndex)
-	
+
 	ticker := time.NewTicker(n.HeartbeatInterval)
 	defer ticker.Stop()
 
@@ -42,7 +45,6 @@ func (n *Node) RunAsFollower() {
 	log.Printf("Node %d is running as Follower\n", n.Id)
 
 	go n.StartRPCServer()
-	
 
 	for {
 		electionTimeout := n.ElectionTimeout
@@ -93,6 +95,6 @@ func (n *Node) StartRPCServer() {
 func (n *Node) InitializeNextIndex(peers []int) {
 	n.NextIndex = make(map[int]int)
 	for _, peerID := range peers {
-		n.NextIndex[peerID] = len(n.Log)
+		n.NextIndex[peerID] = len(n.Log) + 1
 	}
 }

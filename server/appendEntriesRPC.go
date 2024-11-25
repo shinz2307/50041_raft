@@ -31,6 +31,10 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
+	if n.Failed {
+		return nil // Simulate inactivity while failed
+	}
+
 	// Heartbeat check: If Entries is empty, it’s a heartbeat
 	if len(args.Entries) == 0 {
 		reply.Term = n.CurrentTerm
@@ -47,47 +51,48 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 		return nil
 	}
 
-	
-	
-	// Consistency check 
+	// Consistency check
 	// 1. Check if node has a log entry at index = prevLogIndex
-	if args.PrevLogIndex > 0 && args.PrevLogIndex < len(n.Log){
+	if args.PrevLogIndex > 0 && args.PrevLogIndex < len(n.Log) {
 		// 2. Check if nodes entry at prevLogIndex has the same term as PrevLogTerm
-		if n.Log[args.PrevLogIndex].Term == args.PrevLogTerm{
-			log.Printf("Node %d passed consistency check.", n.Id, )
-		}else{
+		if n.Log[args.PrevLogIndex].Term == args.PrevLogTerm {
+			log.Printf("Node %d passed consistency check.", n.Id)
+		} else {
 			log.Printf("Node %d failed second consistency check of the term comparison.", n.Id)
+			if args.PrevLogIndex <= len(n.Log) {
+				n.Log = n.Log[:args.PrevLogIndex] // Added
+			}
 			reply.Term = n.CurrentTerm
 			reply.Success = false
 			return nil
-		}		
-	}else if args.PrevLogIndex == 0{
+		}
+	} else if args.PrevLogIndex == 0 {
 		log.Printf("Node %d is appending the first entry. PrevLogIndex is: %d.", n.Id, args.PrevLogIndex)
-		
-		}else{
+
+	} else {
 		log.Printf("Node %d failed first consistency check of having a prev log entry. PrevLogIndex is: %d. ", n.Id, args.PrevLogIndex)
+		if args.PrevLogIndex <= len(n.Log) {
+			n.Log = n.Log[:args.PrevLogIndex] // Added
+		}
 		reply.Term = n.CurrentTerm
 		reply.Success = false
 		return nil
 	}
-	
-	// TODO: Append new entries to the followers log 
+
+	// TODO: Append new entries to the followers log
 	// If it gets here, it means follower passed the consistency check
-	n.Log = append(n.Log,args.Entries...)
+	n.Log = append(n.Log, args.Entries...)
 
 	if args.LeaderCommit > n.CommitIndex {
 		n.CommitIndex = min(args.LeaderCommit, len(n.Log)-1)
 		//log.Printf("Node %d has committed log index %d", n.Id, n.CommitIndex)
 	}
 
-	
-
 	reply.Term = n.CurrentTerm
 	reply.Success = true
 	successChan <- true
 	//log.Printf("Node %d successfully appended entries", n.Id)
 
-	
 	return nil
 }
 
@@ -97,21 +102,22 @@ func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) {
 	log.Printf(" Leader %d's nextIndex: %v.", peerID, leader.NextIndex)
 
 	var prevLogIndex, prevLogTerm int
-	if leader.NextIndex[peerID] == 0{
+	if leader.NextIndex[peerID] == 0 {
 		prevLogIndex = 0
 		prevLogTerm = 0
-	}else{
+	} else {
 		prevLogIndex = leader.NextIndex[peerID] - 1
 		if prevLogIndex >= 0 {
 			prevLogTerm = leader.Log[prevLogIndex].Term
 		}
 	}
-	
-	if len(entries) !=0{ // If it is not a heartbeat
-		entries = leader.Log[leader.NextIndex[peerID]:]
-		}
-	
 
+	if len(entries) != 0 { // If it is not a heartbeat
+		// entries = leader.Log[leader.NextIndex[peerID]:] // Changed
+		entries = leader.Log[prevLogIndex:]
+		log.Printf("%d", leader.NextIndex[peerID])
+		log.Printf("%d", len(entries))
+	}
 
 	args := &AppendEntriesRequest{
 		Term:         leader.CurrentTerm,
@@ -130,18 +136,25 @@ func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) {
 		return
 	}
 
-	// Handle Success Update NextIndex and MatchIndex 
+	// Handle Success Update NextIndex and MatchIndex
 	if reply.Success {
 		if len(args.Entries) == 0 {
 			//log.Printf("Leader Node has sent heartbeat to Node %d", peerID)
 		} else {
 			//log.Printf("Leader Node %d successfully replicated entries to Node %d", leader.Id, peerID)
-			leader.NextIndex[peerID]=len(leader.Log)
-			
-
+			leader.NextIndex[peerID] = len(leader.Log)
 		}
-	} else{ //Handle Failure
+	} else { //Handle Failure
 		log.Printf("reply.Success = fail")
+		log.Printf("Leader Node %d: AppendEntries to Node %d failed due to inconsistency. Retrying with decremented NextIndex.\n", leader.Id, peerID)
+		leader.mu.Lock()
+		if leader.NextIndex[peerID] > 0 {
+			leader.NextIndex[peerID]--
+		}
+		leader.mu.Unlock()
+
+		// Retry AppendEntries
+		leader.SendAppendEntries(peerID, leader.Log)
 	}
 }
 
