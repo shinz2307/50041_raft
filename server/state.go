@@ -4,17 +4,18 @@ package server
 import (
 	"fmt"
 	"log"
+	"raft/shared"
 )
 
 // NewNode -- initialise a new node in the Follower state
 func NewNode(id int, peers []int) *Node {
 	return &Node{
-		Id:                id,
-		State:             Follower,
-		CurrentTerm:       0,
-		VotedFor:          -1,
-		Peers:             peers,
-		resetTimeoutChan:  make(chan struct{}, 1), // Buffered channel
+		Id:               id,
+		State:            Follower,
+		CurrentTerm:      0,
+		VotedFor:         -1,
+		Peers:            peers,
+		resetTimeoutChan: make(chan struct{}, 1), // Buffered channel
 	}
 }
 
@@ -32,15 +33,21 @@ func (n *Node) BecomeFollower(term int) {
 func (n *Node) BecomeLeader() {
 	if n.State == Candidate {
 		log.Printf("Node %d: Transitioning to Leader for term %d", n.Id, n.CurrentTerm)
-		n.IncrementCurrentTerm()
+		// n.IncrementCurrentTerm()
 		n.SetState(Leader)
 		n.SetLeaderID(n.Id)
 		n.SetVoteCount(0)
+		if !*shared.NewLeader { // Added
+			n.NextIndex = make(map[int]int)
+			for _, peerID := range n.Peers {
+				n.NextIndex[peerID] = len(n.Log)
+			}
+		}
 		n.RunAsLeader()
 
 	} else if n.State == Follower { // Follower cannot become leader
-        panic(fmt.Sprintf("Node %d cannot become Leader while in Follower state", n.Id))
-    }
+		panic(fmt.Sprintf("Node %d cannot become Leader while in Follower state", n.Id))
+	}
 }
 
 // Follower to Candidate
@@ -57,8 +64,8 @@ func (n *Node) BecomeCandidate() {
 
 		n.RunAsCandidate()
 	} else if n.State == Leader { // Leader cannot become candidate
-        panic(fmt.Sprintf("Node %d cannot become Candidate while in Leader state", n.Id))
-    }
+		panic(fmt.Sprintf("Node %d cannot become Candidate while in Leader state", n.Id))
+	}
 }
 
 // Transit from Leader to Follower

@@ -6,7 +6,8 @@ import (
 	"log"
 	"net"
 	"net/rpc"
-	"raft/shared"
+
+	// "raft/shared"
 	"time"
 )
 
@@ -18,11 +19,18 @@ func (n *Node) RunAsLeader() {
 	// The following is purely for receiving messages
 	// heartbeat and timeout is sent / handled automatically by RestartStateTimer
 
-	if !*shared.NewLeader { // Added
-		go n.InitializeNextIndex(n.Peers)
+	// if !*shared.NewLeader { // Added
+	// 	go n.InitializeNextIndex(n.Peers)
+	// }
+	log.Printf("Leader's log: %v", n.Log)
+	if len(n.Log) != 0 {
+		for _, peerID := range n.Peers {
+			if peerID == n.Id {
+				continue // Skip sending to self
+			}
+			go n.SendAppendEntries(peerID, n.Log)
+		}
 	}
-	log.Printf("Leader Node %d initialized NextIndex: %v\n", n.Id, n.NextIndex)
-
 	for {
 		log.Printf("Node %d is now listening for client commands\n", n.Id)
 		select {
@@ -120,11 +128,4 @@ func (n *Node) StartRPCServer() {
 func GetFormatDuration(d time.Duration) string {
 	seconds := d.Seconds()
 	return fmt.Sprintf("%.5f seconds", seconds)
-}
-
-func (n *Node) InitializeNextIndex(peers []int) {
-	n.NextIndex = make(map[int]int)
-	for _, peerID := range peers {
-		n.NextIndex[peerID] = len(n.Log) + 1
-	}
 }

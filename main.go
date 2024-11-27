@@ -33,8 +33,8 @@ func main() {
 		node := server.NewNode(i, []int{0, 1, 2, 3, 4})
 		node.SetTimeoutOrHeartbeatInterval() // Auto set timeout based on node's state
 		node.QuitChannel = quitChannel       // Channel to signal node to stop
-		node.ElectionTimeout = electionTimeout
-		node.HeartbeatInterval = heartbeatInterval
+		// node.ElectionTimeout = electionTimeout
+		// node.HeartbeatInterval = heartbeatInterval
 		node.QuitChannel = quitChannel // Channel to signal node to stop
 
 		// Initialize fields for log replication
@@ -133,10 +133,6 @@ func main() {
 
 	// Do not decide on leader node first. Everyone starts as follower
 
-	// Leader node 0, Followers node 1-4
-	nodes[0].State = server.Leader
-	nodes[0].LeaderID = 0 //Set initial leaderID to its own
-
 	// Start each node in its own goroutine with its specific channel
 	for _, node := range nodes {
 
@@ -148,17 +144,7 @@ func main() {
 	if *higherTerm {
 		entry := server.LogEntry{
 			Command: "command",
-			Term:    2,
-		}
-		log.Println("========= Simulating Different Logs for Node 1 ============ \n")
-		nodes[1].Log = append(nodes[1].Log, entry)
-		nodes[1].CurrentTerm = 2
-		nodes[1].CommitIndex = 1
-	}
-	if *higherTerm {
-		entry := server.LogEntry{
-			Command: "command",
-			Term:    2,
+			Term:    3,
 		}
 		log.Println("========= Simulating Different Logs for Node 1 ============ \n")
 		nodes[1].Log = append(nodes[1].Log, entry)
@@ -198,7 +184,7 @@ func main() {
 				log.Printf("========== Incoming Client command =========\n")
 
 				command := fmt.Sprintf("Client Command %d", commandCounter)
-				commandChannels[0] <- command
+				commandChannel <- command
 				commandCounter++
 			}
 		}()
@@ -213,9 +199,19 @@ func main() {
 	// Added a flag to simulate leader failure. To run "go run main.go -fail-leader=true"
 	if *failLeader {
 		go func() {
-			time.Sleep(5 * time.Second)
-			log.Println("========= Simulating leader failure for Node 0 ============ \n")
-			close(quitChannel) // Signal leader to stop sending heartbeats
+			time.Sleep(15 * time.Second)
+			for _, node := range nodes {
+				if node.State == server.Leader {
+					log.Println("========= Simulating leader failure for Node %d============ \n", node.Id)
+					node.BecomeFollower(node.CurrentTerm)
+				} else if node.State == server.Follower {
+					log.Printf("Node %d is a Follower", node.Id)
+				} else if node.State == server.Candidate {
+					log.Printf("Node %d is a Candidate", node.Id)
+				} else {
+					log.Printf("Node %d is in an unknown state", node.Id)
+				}
+			}
 		}()
 	} else {
 		log.Println("Leader failure simulation is disabled")
