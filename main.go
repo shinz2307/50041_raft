@@ -18,27 +18,32 @@ func main() {
 	// NewLeader := flag.Bool("new-leader", false, "Simulate New Leader elected and new different Index")
 	higherTerm := flag.Bool("higher-term", false, "Simulate Different logs on Node 1")
 	flag.Parse()
-	heartbeatInterval := 2000 * time.Millisecond
-	electionTimeout := 5 * heartbeatInterval // Election timeout is 5x heartbeat interval
 
 	// Define channels for each node
-	commandChannels := make(map[int]chan string)
 	quitChannel := make(chan struct{}) // Channel to signal leader failure
 
 	var nodes []*server.Node
+
+	commandChannel := make(chan string, 1)
 
 	// Initialise 1 new leader and 4 followers with already existing logs
 
 	// Initialize 1 leader and 4 followers
 	for i := 0; i < 5; i++ {
 		node := server.NewNode(i, []int{0, 1, 2, 3, 4})
+		node.SetTimeoutOrHeartbeatInterval() // Auto set timeout based on node's state
+		node.QuitChannel = quitChannel       // Channel to signal node to stop
 		node.ElectionTimeout = electionTimeout
 		node.HeartbeatInterval = heartbeatInterval
 		node.QuitChannel = quitChannel // Channel to signal node to stop
 
+		// Initialize fields for log replication
+		node.Log = []server.LogEntry{} //Initial log as empty
+		node.CurrentTerm = 1           // Initial term =1
+		node.LeaderID = -1             // Initialize leaderID to -1 as no leader
+
 		nodes = append(nodes, node)
-		commandChannels[i] = make(chan string, 1) // Channel for client commands
-		node.CommandChannel = commandChannels[i]
+		node.CommandChannel = commandChannel
 	}
 
 	if *shared.NewLeader {
@@ -126,23 +131,29 @@ func main() {
 		}
 	}
 
+	// Do not decide on leader node first. Everyone starts as follower
+
 	// Leader node 0, Followers node 1-4
 	nodes[0].State = server.Leader
 	nodes[0].LeaderID = 0 //Set initial leaderID to its own
 
 	// Start each node in its own goroutine with its specific channel
 	for _, node := range nodes {
-		if node.State == server.Leader {
-			// Initialize as leader
-			go func(n *server.Node) {
-				n.RunAsLeader()
-			}(node)
-		} else {
-			// Initialize as follower
-			go func(n *server.Node) {
-				n.RunAsFollower()
-			}(node)
+
+		go node.StartRPCServer()
+		go func(n *server.Node) {
+			n.RunAsFollower()
+		}(node)
+	}
+	if *higherTerm {
+		entry := server.LogEntry{
+			Command: "command",
+			Term:    2,
 		}
+		log.Println("========= Simulating Different Logs for Node 1 ============ \n")
+		nodes[1].Log = append(nodes[1].Log, entry)
+		nodes[1].CurrentTerm = 2
+		nodes[1].CommitIndex = 1
 	}
 	if *higherTerm {
 		entry := server.LogEntry{

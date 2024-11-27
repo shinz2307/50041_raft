@@ -1,5 +1,6 @@
 package server
 
+// Receiving RequestVoteRPC logic is here
 import (
 	"fmt"
 	"log"
@@ -22,7 +23,7 @@ type RequestVoteReply struct {
 
 // Function will run on candidate's
 func (n *Node) SendRequestVoteRPCs() {
-	log.Printf("Node %d: Requesting votes for term %d", n.Id, n.CurrentTerm)
+	log.Printf("Node %d sends out RequestVoteRPCs for term %d", n.Id, n.CurrentTerm)
 
 	var lastLogIndex int
     var lastLogTerm int
@@ -56,7 +57,7 @@ func (n *Node) SendRequestVoteRPCs() {
 				log.Printf("Candidate Node %d failed to call RequestVoteRPC on Node %d: %v\n", n.Id, id, err)
 			}
 
-			n.CountVote(&reply) // New function to handle the reply
+			n.CountVote(&reply) // handle the reply
 		}(peerID)
 
 	}
@@ -80,25 +81,37 @@ func (n *Node) CallRequestVoteRPC(peerID int, args *RequestVoteArgs, reply *Requ
 
 // Function will run on follower or ANOTHER candidate's
 func (n *Node) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) error {
-
 	// log.Printf("Node %d received RequestVoteRPC from Node %d for term %d\n", n.Id, args.CandidateID, args.Term)
 
 	reply.Term = n.CurrentTerm
 
 	if n.CurrentTerm > args.Term {
 		reply.VoteGranted = false
-		// log.Printf("Node %d denies vote to Node %d: current term %d is greater than candidate's term %d\n", n.Id, args.CandidateID, n.CurrentTerm, args.Term)
+		log.Printf("Node %d denies vote to Node %d: current term %d is > the candidate's term %d\n", n.Id, args.CandidateID, n.CurrentTerm, args.Term)
 	} else if (n.VotedFor == -1 || n.VotedFor == args.CandidateID) && n.CommitIndex <= args.LastLogIndex {
 		// We take -1 as NULL
 		// We also use the last log index as a measure for "updated-ness"
 		reply.VoteGranted = true
+		log.Printf("Node %d votes true to Node %d for term %d.\n", n.Id, args.CandidateID, args.Term)
 		n.VotedFor = args.CandidateID
 	} else {
 		reply.VoteGranted = false
-		// log.Printf("Node %d votes false due to failure of both RequestVoteRPC's conditions", n.Id)
+
+		// Following is just for LOGGING!:
+		log.Printf("Node %d votes false to Node %d for term %d. Reasons:\n", n.Id, args.CandidateID, args.Term)
+		if n.CurrentTerm <= args.Term {
+			log.Printf("\t- The candidate's term > this node (the candidate's term: %d, current term: %d) BUT\n", args.Term, n.CurrentTerm)
+		}
+		if n.VotedFor != -1 && n.VotedFor != args.CandidateID {
+			log.Printf("\t- Already voted for another candidate (voted for: %d, the candidate: %d)\n", n.VotedFor, args.CandidateID)
+		}
+		if n.CommitIndex > args.LastLogIndex {
+			log.Printf("\t- The candidate's log is outdated (the candidate's last log index: %d, current commit index: %d)\n", args.LastLogIndex, n.CommitIndex)
+		}
+
 	}
 
 
-	log.Printf("Node %d response to Node %d for term %d: voteGranted = %v\n", n.Id, args.CandidateID, reply.Term, reply.VoteGranted)
+	// log.Printf("Node %d response to Node %d for term %d: voteGranted = %v\n", n.Id, args.CandidateID, reply.Term, reply.VoteGranted)
 	return nil // No error occurred
 }

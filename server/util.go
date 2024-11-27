@@ -11,26 +11,21 @@ import (
 )
 
 func (n *Node) RunAsLeader() {
-	log.Printf("Node %d is starting up as Leader\n", n.Id)
+	log.Printf("Node %d finished transition tasks. Now runs as Leader\n", n.Id)
 
-	go n.StartRPCServer()
+	n.SendHeartbeats()  // Initial heartbeat
+	n.BeginStateTimer() // Then periodically will send out heartbeats
+	// The following is purely for receiving messages
+	// heartbeat and timeout is sent / handled automatically by RestartStateTimer
 
-	// maybe add delay?
-	time.Sleep(2 * time.Second)
-
-	if !*shared.NewLeader {
+	if !*shared.NewLeader { // Added
 		go n.InitializeNextIndex(n.Peers)
 	}
 	log.Printf("Leader Node %d initialized NextIndex: %v\n", n.Id, n.NextIndex)
 
-	ticker := time.NewTicker(n.HeartbeatInterval)
-	defer ticker.Stop()
-
 	for {
+		log.Printf("Node %d is now listening for client commands\n", n.Id)
 		select {
-		// Every tick, send heartbeat
-		case <-ticker.C:
-			n.SendHeartbeats()
 		case command := <-n.CommandChannel:
 			log.Printf("Leader Node %d received client command: %s\n", n.Id, command)
 			n.HandleClientCommand(command)
@@ -42,24 +37,54 @@ func (n *Node) RunAsLeader() {
 }
 
 func (n *Node) RunAsFollower() {
-	log.Printf("Node %d is running as Follower\n", n.Id)
+	log.Printf("Node %d finished transition tasks. Now runs as Follower.\n", n.Id)
 
-	go n.StartRPCServer()
+	go n.BeginStateTimer()
+	// The following is purely for receiving messages
+	// heartbeat and timeout is sent / handled automatically by RestartStateTimer
+	// for {
+	// 	select {
+	// 		case <-n.resetTimeoutChan:
+	// 			// Received heartbeat, reset election timeout
+	// 			// Remember to also set the n.LeaderID from heartbeat (consider case of new leader)
+	// 			log.Printf("Node %d has received a heartbeat. Resetting timeout.\n", n.Id)
 
-	for {
-		electionTimeout := n.ElectionTimeout
+	// 		case <-time.After(n.TimeoutOrHeartbeatInterval):
+	// 			log.Printf("Node %d heartbeat timeout. Becoming candidate.\n", n.Id)
+	// 			n.BecomeCandidate()
 
-		select {
-		case <-n.resetTimeoutChan:
-			// Received heartbeat, reset election timeout
-			// Remember to also set the n.LeaderID from heartbeat (consider case of new leader)
-		case <-time.After(electionTimeout):
-			//log.Printf("Node %d election timeout. Becoming candidate.\n", n.Id)
-			//n.StartElection()
+	// 			return
+	// 	}
+	// }
 
-			return
-		}
-	}
+	select {}
+}
+
+func (n *Node) RunAsCandidate() {
+	log.Printf("Node %d finished transition tasks. Now runs as Candidate.\n", n.Id)
+
+	go n.BeginStateTimer()
+	// The following is purely for receiving messages
+	// heartbeat and timeout is sent / handled automatically by RestartStateTimer
+	// for {
+	// 	select {
+	// 		case <-n.resetTimeoutChan:
+	// 			// Received heartbeat. Then this node must concede
+	// 			// Remember to also set the n.LeaderID from heartbeat (consider case of new leader)
+	// 			log.Printf("Node %d has received a heartbeat. Conceding as candidate to become follower.\n", n.Id)
+
+	// 			var dummyTerm int = 1
+	// 			n.BecomeFollower(dummyTerm)
+
+	// 		case <-time.After(n.TimeoutOrHeartbeatInterval):
+	// 			log.Printf("Node %d election timeout. Becoming candidate again.\n", n.Id)
+	// 			n.BecomeCandidate()
+
+	// 			return
+	// 	}
+	// }
+
+	select {}
 }
 
 func (n *Node) StartRPCServer() {
@@ -90,6 +115,11 @@ func (n *Node) StartRPCServer() {
 		}
 		go server.ServeConn(conn)
 	}
+}
+
+func GetFormatDuration(d time.Duration) string {
+	seconds := d.Seconds()
+	return fmt.Sprintf("%.5f seconds", seconds)
 }
 
 func (n *Node) InitializeNextIndex(peers []int) {
