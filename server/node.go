@@ -116,15 +116,15 @@ func (n *Node) SetTimeoutOrHeartbeatInterval() {
 	// }
 
 	switch n.State {
-	case Follower:
-		n.TimeoutOrHeartbeatInterval = time.Duration((5 + rand.Float64()*2) * float64(time.Second)) // 5-7 seconds
-		//printTimer()
-	case Candidate:
-		n.TimeoutOrHeartbeatInterval = time.Duration((3 + rand.Float64()*2) * float64(time.Second)) // 3-5 seconds
-		//printTimer()
-	case Leader:
-		n.TimeoutOrHeartbeatInterval = time.Duration((1 + rand.Float64()*1) * float64(time.Second)) // 1-2 seconds for heartbeat
-		//printTimer()
+		case Follower:
+			n.TimeoutOrHeartbeatInterval = time.Duration((5 + rand.Float64()*2) * float64(time.Second)) // 5-7 seconds
+			//printTimer()
+		case Candidate:
+			n.TimeoutOrHeartbeatInterval = time.Duration((3 + rand.Float64()*2) * float64(time.Second)) // 3-5 seconds
+			//printTimer()
+		case Leader:
+			n.TimeoutOrHeartbeatInterval = time.Duration((1 + rand.Float64()*1) * float64(time.Second)) // 1-2 seconds for heartbeat
+			//printTimer()
 	default:
 		// If a node is not any of the above states. SHOULD NOT HAPPEN
 		panic(fmt.Sprintf("Invalid node state: %s", n.State))
