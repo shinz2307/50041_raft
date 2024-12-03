@@ -125,6 +125,36 @@ func (n *Node) StartRPCServer() {
 	}
 }
 
+func (n *Node) StartSingleRPCServer() {
+	// log.Printf("Node %d is attempting to register RPC\n", n.Id)
+
+	// Since we are using the same struct, we need to create new server to register the RPC
+	server := rpc.NewServer() // Create a new server for each node
+	if err := server.RegisterName("SingleNode", n); err != nil {
+		log.Fatalf("Failed to register for RPC: %v\n", err)
+	}
+
+	// hard code internal port number
+	address := "0.0.0.0:8080"
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		log.Fatalf("Failed to listen on %s: %v", address, err)
+	}
+	defer listener.Close()
+
+	log.Printf("RPC server is listening on %s...\n", address)
+
+	// Accept incoming connections
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Printf("Failed to accept connection: %v", err)
+			continue
+		}
+		go server.ServeConn(conn)
+	}
+}
+
 func GetFormatDuration(d time.Duration) string {
 	seconds := d.Seconds()
 	return fmt.Sprintf("%.5f seconds", seconds)

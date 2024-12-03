@@ -17,7 +17,14 @@ func main() {
 	failClient := flag.Bool("fail-client", false, "Simulate Follower Node failure after 5 seconds")
 	// NewLeader := flag.Bool("new-leader", false, "Simulate New Leader elected and new different Index")
 	higherTerm := flag.Bool("higher-term", false, "Simulate Different logs on Node 1")
+
+	singleRPC := flag.Bool("single-rpc", false, "Simulate Different logs on Node 1")
+
 	flag.Parse()
+
+	if *singleRPC {
+		log.Printf("single rpc")
+	}
 
 	// Define channels for each node
 	quitChannel := make(chan struct{}) // Channel to signal leader failure
@@ -134,13 +141,24 @@ func main() {
 	// Do not decide on leader node first. Everyone starts as follower
 
 	// Start each node in its own goroutine with its specific channel
-	for _, node := range nodes {
 
-		go node.StartRPCServer()
-		go func(n *server.Node) {
-			n.RunAsFollower()
-		}(node)
+	if *singleRPC {
+		for _, node := range nodes {
+			go node.StartSingleRPCServer()
+			go func(n *server.Node) {
+				n.RunAsFollower()
+			}(node)
+			break
+		}
+	} else {
+		for _, node := range nodes {
+			go node.StartRPCServer()
+			go func(n *server.Node) {
+				n.RunAsFollower()
+			}(node)
+		}
 	}
+
 	if *higherTerm {
 		entry := server.LogEntry{
 			Command: "command",
@@ -222,13 +240,26 @@ func main() {
 	if *failClient {
 		go func() {
 			time.Sleep(15 * time.Second)
-			log.Println("========= Simulating Node 1 Failure ============ \n")
-			nodes[1].Failed = true
+			log.Println("========= Simulating Node Failure ============ \n")
+
+			for _, node := range nodes {
+				if node.State != server.Leader {
+					node.Failed = true
+					log.Printf("Failed Node: %d", node.Id)
+					break
+				}
+			}
 
 			// Restart the client after 5 seconds
 			time.Sleep(10 * time.Second)
-			nodes[1].Failed = false
-			log.Println("========= Node 1 Recovered ========== \n")
+			for _, node := range nodes {
+				if node.Failed == true {
+					node.Failed = false
+					break
+				}
+			}
+
+			log.Println("========= Node Recovered ========== \n")
 		}()
 	}
 

@@ -206,15 +206,15 @@ func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) {
 
 // CallAppendEntriesRPC performs the actual RPC call to AppendEntries on the follower.
 func (n *Node) CallAppendEntriesRPC(peerID int, args *AppendEntriesRequest, reply *AppendEntriesResponse) error {
-	address := fmt.Sprintf("localhost:%d", 8000+peerID)
+	// docker port address
+	address := fmt.Sprintf("app%d:8080", peerID)
 	client, err := rpc.Dial("tcp", address)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
 
-	serviceName := fmt.Sprintf("Node%d", peerID)
-	return client.Call(serviceName+".AppendEntries", args, reply)
+	return client.Call("SingleNode.AppendEntries", args, reply)
 }
 
 // SendHeartbeats sends an empty AppendEntries RPC to all followers as a heartbeat.

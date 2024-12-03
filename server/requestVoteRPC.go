@@ -10,14 +10,14 @@ import (
 type RequestVoteArgs struct {
 	// Pertaining to the candidate
 	Term         int
-	CandidateID  int 
+	CandidateID  int
 	LastLogIndex int // Index of last log entry
 	LastLogTerm  int // Term of last log entry
 
 }
 
 type RequestVoteReply struct {
-	Term int
+	Term        int
 	VoteGranted bool
 }
 
@@ -26,23 +26,22 @@ func (n *Node) SendRequestVoteRPCs() {
 	log.Printf("Node %d sends out RequestVoteRPCs for term %d", n.Id, n.CurrentTerm)
 
 	var lastLogIndex int
-    var lastLogTerm int
+	var lastLogTerm int
 
-    if len(n.Log) > 0 {
-        lastLogIndex = len(n.Log) - 1
-        lastLogTerm = n.Log[lastLogIndex].Term
-    } else { // No log entries
-        lastLogIndex = 0
-        lastLogTerm = 0
-    }
-
-	args := &RequestVoteArgs{
-		Term: n.CurrentTerm,
-		CandidateID: n.Id,
-		LastLogIndex: lastLogIndex, // TODO: CHECK
-		LastLogTerm: lastLogTerm, // TODO: CHECK
+	if len(n.Log) > 0 {
+		lastLogIndex = len(n.Log) - 1
+		lastLogTerm = n.Log[lastLogIndex].Term
+	} else { // No log entries
+		lastLogIndex = 0
+		lastLogTerm = 0
 	}
 
+	args := &RequestVoteArgs{
+		Term:         n.CurrentTerm,
+		CandidateID:  n.Id,
+		LastLogIndex: lastLogIndex, // TODO: CHECK
+		LastLogTerm:  lastLogTerm,  // TODO: CHECK
+	}
 
 	// Send RequestVoteRPC to all peers except this
 	for _, peerID := range n.Peers {
@@ -65,7 +64,7 @@ func (n *Node) SendRequestVoteRPCs() {
 
 // Function will run on the candidate's
 func (n *Node) CallRequestVoteRPC(peerID int, args *RequestVoteArgs, reply *RequestVoteReply) error {
-	address := fmt.Sprintf("localhost:%d", 8000+peerID) // Construct the target address
+	address := fmt.Sprintf("app%d:8080", peerID)
 	log.Printf("Sending RequestVoteRPC to %v\n", address)
 	client, err := rpc.Dial("tcp", address) // Establish an RPC connection to the follower node
 	if err != nil {                         // Handle connection error
@@ -73,11 +72,8 @@ func (n *Node) CallRequestVoteRPC(peerID int, args *RequestVoteArgs, reply *Requ
 	}
 	defer client.Close() // Ensure the connection is closed after the RPC call
 
-	// Use the unique service name to call the Heartbeat method on the target node
-	serviceName := fmt.Sprintf("Node%d.RequestVote", peerID)
-	return client.Call(serviceName, args, reply) // Make the RPC call to the follower's RequestVote method
+	return client.Call("SingleNode.RequestVote", args, reply) // Make the RPC call to the follower's RequestVote method
 }
-
 
 // Function will run on follower or ANOTHER candidate's
 func (n *Node) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) error {
@@ -110,7 +106,6 @@ func (n *Node) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) error
 		}
 
 	}
-
 
 	// log.Printf("Node %d response to Node %d for term %d: voteGranted = %v\n", n.Id, args.CandidateID, reply.Term, reply.VoteGranted)
 	return nil // No error occurred
