@@ -1,17 +1,14 @@
-# Use the official Golang image as the base
+# Use the official Go image
 FROM golang:1.23.2
 
-# Set the working directory inside the container
+# Set the working directory in the container
 WORKDIR /app
 
-# Copy the application code
-COPY . .
+# Copy the Go script into the container
+COPY . /app
 
-# Build the Go application
-RUN go run main.go -single-rpc
-
-# Expose the application port
+# Expose the application port (optional if your Go script binds to a specific port)
 EXPOSE 8080
 
-# Command to run the application
-CMD ["./app"]
+# Command to run your Go script
+CMD ["go", "run", "main.go", "-single-rpc"]
