@@ -1,6 +1,6 @@
 // Node struct and state (Leader, Follower, Candidate)
 
-package server
+package main
 
 import (
 	"fmt"
@@ -80,6 +80,14 @@ type Node struct {
 	resetTimeoutChan chan struct{} // For followers to reset election timeout
 	mu               sync.Mutex
 }
+func (n *Node) IsLeader(_ *struct{}, reply *bool) error { 
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	log.Printf("Node %d state: %s", n.Id, n.State.String())
+	*reply = (n.State == Leader)
+	return nil
+   }
 
 func (n *Node) GetLog() []LogEntry {
 	n.mu.Lock()

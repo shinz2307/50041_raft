@@ -1,6 +1,6 @@
 // server/heartbeatRPC.go
 
-package server
+package main
 
 import (
 	"fmt"
@@ -100,6 +100,7 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 		reply.Term = n.CurrentTerm
 		reply.Success = false
 		return nil
+		log.Printf("Node %d is appending the first entry. PrevLogIndex is: %d.", n.Id, args.PrevLogIndex)
 	}
 
 	// Append new entries to the followers log
@@ -113,6 +114,7 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 			n.Log = append(n.Log, entry)
 		}
 	}
+	n.CurrentTerm = args.Entries[len(args.Entries)-1].Term
 
 	if args.LeaderCommit > n.CommitIndex {
 		n.CommitIndex = min(args.LeaderCommit, len(n.Log)-1)
@@ -128,9 +130,9 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 }
 
 // SendAppendEntries sends AppendEntries RPC to a specific follower.
-func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) {
+func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) error {
 	leader.mu.Lock()
-	log.Printf("Sending command to Node %d. Current nextIndex: %v. Current leader's log: %v", peerID, leader.NextIndex, entries)
+	log.Printf("Sending AppendEntries to Node %d. Current nextIndex: %v. Current leader's log: %v", peerID, leader.NextIndex, entries)
 
 	var prevLogIndex, prevLogTerm int
 	if leader.NextIndex[peerID] == 0 && len(entries) == 1 {
@@ -169,7 +171,7 @@ func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) {
 	err := leader.CallAppendEntriesRPC(peerID, args, &reply)
 	if err != nil {
 		log.Printf("Leader Node %d failed to send AppendEntries to Node %d: %v\n", leader.Id, peerID, err)
-		return
+		return nil
 	}
 
 	// If Node fails, pause
@@ -177,7 +179,7 @@ func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) {
 		time.Sleep(5 * time.Second)
 		// Retry AppendEntries
 		//leader.SendAppendEntries(peerID, leader.Log)
-		return
+		return nil
 	}
 
 	// Handle Success Update NextIndex and MatchIndex
@@ -202,18 +204,19 @@ func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) {
 		// Retry AppendEntries
 		leader.SendAppendEntries(peerID, leader.Log)
 	}
+	return nil
 }
 
 // CallAppendEntriesRPC performs the actual RPC call to AppendEntries on the follower.
 func (n *Node) CallAppendEntriesRPC(peerID int, args *AppendEntriesRequest, reply *AppendEntriesResponse) error {
-	// docker port address
-	address := fmt.Sprintf("app%d:8080", peerID)
+	address := fmt.Sprintf("app%d:8080", peerID) // Assumes Docker container names as app1, app2, etc.
 	client, err := rpc.Dial("tcp", address)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
 
+	// Call the RPC method
 	return client.Call("SingleNode.AppendEntries", args, reply)
 }
 
@@ -229,24 +232,23 @@ func (n *Node) SendHeartbeats() {
 }
 
 // HandleClientCommand processes a client command received by the leader.
-func (n *Node) HandleClientCommand(command string) {
+func (n *Node) HandleClientCommand(command *string, reply *bool) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
 	// Append the command to the leader's log
 	entry := LogEntry{
-		Command: command,
+		Command: *command, // Dereference the pointer to get the string
 		Term:    n.CurrentTerm,
 	}
 	n.Log = append(n.Log, entry)
-	log.Printf("Leader Node %d appended command: %s", n.Id, command)
+	log.Printf("Leader Node %d appended command: %s", n.Id, *command)
 
 	// Goroutine to monitor successes and trigger a function on threshold
 	go func() {
 		successCount := 0
 		for range successChan {
 			successCount++
-			//log.Printf("Current success counter is %d", successCount)
 			if successCount >= len(n.Peers)/2+1 {
 				// Commit entries number of replies is more than half
 				n.CommitEntries()
@@ -262,6 +264,10 @@ func (n *Node) HandleClientCommand(command string) {
 		}
 		go n.SendAppendEntries(peerID, n.Log)
 	}
+
+	// Indicate success to the client
+	*reply = true
+	return nil
 }
 
 func (n *Node) CommitEntries() {

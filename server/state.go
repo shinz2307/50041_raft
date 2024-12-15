@@ -1,10 +1,10 @@
 // Persistent state and state transitions
-package server
+package main
 
 import (
 	"fmt"
 	"log"
-	"raft/shared"
+
 )
 
 // NewNode -- initialise a new node in the Follower state
@@ -37,12 +37,12 @@ func (n *Node) BecomeLeader() {
 		n.SetState(Leader)
 		n.SetLeaderID(n.Id)
 		n.SetVoteCount(0)
-		if !*shared.NewLeader { // Added
-			n.NextIndex = make(map[int]int)
-			for _, peerID := range n.Peers {
-				n.NextIndex[peerID] = len(n.Log)
-			}
+		//if !*shared.NewLeader { // Added
+		n.NextIndex = make(map[int]int)
+		for _, peerID := range n.Peers {
+			n.NextIndex[peerID] = len(n.Log)
 		}
+		//}
 		n.RunAsLeader()
 
 	} else if n.State == Follower { // Follower cannot become leader

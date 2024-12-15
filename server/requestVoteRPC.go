@@ -1,4 +1,4 @@
-package server
+package main
 
 // Receiving RequestVoteRPC logic is here
 import (

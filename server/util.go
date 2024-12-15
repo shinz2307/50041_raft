@@ -1,5 +1,5 @@
 // Helper functions for timeouts, randomisation, etc.
-package server
+package main
 
 import (
 	"fmt"
@@ -14,14 +14,24 @@ import (
 func (n *Node) RunAsLeader() {
 	log.Printf("Node %d finished transition tasks. Now runs as Leader\n", n.Id)
 
+	// Initialise NextIndex map
+	n.NextIndex = make(map[int]int)
+	for _, peerID := range n.Peers {
+		if peerID != n.Id {
+			// Initialising NextIndex for each peer to the length of the leader's log
+			n.NextIndex[peerID] = len(n.Log)
+		}
+	}
+	log.Printf("Node %d initialised NextIndex: %v", n.Id, n.NextIndex)
+
 	n.SendHeartbeats()  // Initial heartbeat
 	n.BeginStateTimer() // Then periodically will send out heartbeats
 	// The following is purely for receiving messages
 	// heartbeat and timeout is sent / handled automatically by RestartStateTimer
 
 	// if !*shared.NewLeader { // Added
-	// 	go n.InitializeNextIndex(n.Peers)
-	// }
+	// go n.InitializeNextIndex(n.Peers)
+
 	log.Printf("Leader's log: %v", n.Log)
 	if len(n.Log) != 0 {
 		for _, peerID := range n.Peers {
@@ -34,9 +44,17 @@ func (n *Node) RunAsLeader() {
 	for {
 		log.Printf("Node %d is now listening for client commands\n", n.Id)
 		select {
-		case command := <-n.CommandChannel:
+		case command := <-n.CommandChannel: // Receive a command from the client
 			log.Printf("Leader Node %d received client command: %s\n", n.Id, command)
-			n.HandleClientCommand(command)
+
+			// Call HandleClientCommand as an RPC-like internal function
+			reply := false
+			err := n.HandleClientCommand(&command, &reply)
+			if err != nil {
+				log.Printf("Error handling client command on Node %d: %v\n", n.Id, err)
+			} else if reply {
+				log.Printf("Leader Node %d successfully processed client command: %s\n", n.Id, command)
+			}
 		case <-n.QuitChannel:
 			log.Printf("Leader Node %d is stopping\n", n.Id)
 			return
@@ -47,7 +65,7 @@ func (n *Node) RunAsLeader() {
 func (n *Node) RunAsFollower() {
 	log.Printf("Node %d finished transition tasks. Now runs as Follower.\n", n.Id)
 
-	go n.BeginStateTimer()
+	n.BeginStateTimer()
 	// The following is purely for receiving messages
 	// heartbeat and timeout is sent / handled automatically by RestartStateTimer
 	// for {
@@ -71,7 +89,7 @@ func (n *Node) RunAsFollower() {
 func (n *Node) RunAsCandidate() {
 	log.Printf("Node %d finished transition tasks. Now runs as Candidate.\n", n.Id)
 
-	go n.BeginStateTimer()
+	n.BeginStateTimer()
 	// The following is purely for receiving messages
 	// heartbeat and timeout is sent / handled automatically by RestartStateTimer
 	// for {
@@ -96,32 +114,24 @@ func (n *Node) RunAsCandidate() {
 }
 
 func (n *Node) StartRPCServer() {
-	//log.Printf("Node %d is attempting to register RPC\n", n.Id)
-
-	// Since we are using the same struct, we need to create new server to register the RPC
-	server := rpc.NewServer() // Create a new server for each node
-	nodeServiceName := fmt.Sprintf("Node%d", n.Id)
-	if err := server.RegisterName(nodeServiceName, n); err != nil {
-		log.Fatalf("Failed to register %s for RPC: %v\n", nodeServiceName, err)
-	}
-
-	// generate port number attach listener to address
-	address := fmt.Sprintf("localhost:%d", 8000+n.Id)
-	//log.Printf("Node %d trying to listen on %v...\n", n.Id, address)
-	listener, err := net.Listen("tcp", address)
+	err := rpc.RegisterName("Node", n) // Register the Node service
 	if err != nil {
-		log.Fatalf("Node %d failed to listen: %v\n", n.Id, err)
+		log.Fatalf("Error registering Node RPC service: %v", err)
 	}
 
-	defer listener.Close()
-	log.Printf("Node %d listening on %v...\n", n.Id, address)
+	listener, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		log.Fatalf("Error starting RPC server on Node %d: %v", n.Id, err)
+	}
+	log.Printf("Node %d listening on :8080", n.Id)
+
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("Failed to accept connection: %v", err)
+			log.Printf("Error accepting connection: %v", err)
 			continue
 		}
-		go server.ServeConn(conn)
+		go rpc.ServeConn(conn)
 	}
 }
 
