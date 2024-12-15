@@ -15,14 +15,19 @@ func (n *Node) RunAsLeader() {
 	log.Printf("Node %d finished transition tasks. Now runs as Leader\n", n.Id)
 
 	// Initialise NextIndex map
+	n.mu.Lock()
 	n.NextIndex = make(map[int]int)
+	n.mu.Unlock()
+
 	for _, peerID := range n.Peers {
 		if peerID != n.Id {
 			// Initialising NextIndex for each peer to the length of the leader's log
+			n.mu.Lock()
 			n.NextIndex[peerID] = len(n.Log)
+			n.mu.Unlock()
 		}
 	}
-	log.Printf("Node %d initialised NextIndex: %v", n.Id, n.NextIndex)
+	// log.Printf("Node %d initialised NextIndex: %v", n.Id, n.NextIndex)
 
 	n.SendHeartbeats()  // Initial heartbeat
 	n.BeginStateTimer() // Then periodically will send out heartbeats
@@ -111,28 +116,6 @@ func (n *Node) RunAsCandidate() {
 	// }
 
 	select {}
-}
-
-func (n *Node) StartRPCServer() {
-	err := rpc.RegisterName("Node", n) // Register the Node service
-	if err != nil {
-		log.Fatalf("Error registering Node RPC service: %v", err)
-	}
-
-	listener, err := net.Listen("tcp", ":8080")
-	if err != nil {
-		log.Fatalf("Error starting RPC server on Node %d: %v", n.Id, err)
-	}
-	log.Printf("Node %d listening on :8080", n.Id)
-
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			log.Printf("Error accepting connection: %v", err)
-			continue
-		}
-		go rpc.ServeConn(conn)
-	}
 }
 
 func (n *Node) StartSingleRPCServer() {

@@ -16,7 +16,7 @@ func (n *Node) StartElection() { // TODO: UNUSED NOW. Replaced by BecomeCandidat
 	n.SetVoteCount(1)
 
 	n.SendRequestVoteRPCs()
-	log.Printf("Node %d starts election timer %d\n", n.Id, n.CurrentTerm)
+	// log.Printf("Node %d starts election timer %d\n", n.Id, n.CurrentTerm)
 	go n.BeginStateTimer() // Start timer in background
 
 	// Question: can you start an election for a term that someone else is already electing for?
