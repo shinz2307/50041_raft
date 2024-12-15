@@ -113,6 +113,7 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 			n.Log = append(n.Log, entry)
 		}
 	}
+	n.CurrentTerm = args.Entries[len(args.Entries)-1].Term
 
 	if args.LeaderCommit > n.CommitIndex {
 		n.CommitIndex = min(args.LeaderCommit, len(n.Log)-1)
@@ -130,7 +131,7 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 // SendAppendEntries sends AppendEntries RPC to a specific follower.
 func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) {
 	leader.mu.Lock()
-	log.Printf("Sending command to Node %d. Current nextIndex: %v. Current leader's log: %v", peerID, leader.NextIndex, entries)
+	log.Printf("Sending AppendEntries to Node %d. Current nextIndex: %v. Current leader's log: %v", peerID, leader.NextIndex, entries)
 
 	var prevLogIndex, prevLogTerm int
 	if leader.NextIndex[peerID] == 0 && len(entries) == 1 {
