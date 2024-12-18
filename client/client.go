@@ -101,7 +101,7 @@ func main() {
             }
 
             // Call SingleNode.HandleClientWrite for Write commands
-            err = client.Call("SingleNode.HandleClientWrite", &commandType, &reply)
+            err = client.Call("SingleNode.HandleClientWrite", &commandMsg, &reply)
         }
 
         // Handle RPC errors
