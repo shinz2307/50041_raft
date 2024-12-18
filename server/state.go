@@ -21,7 +21,7 @@ func NewNode(id int, peers []int) *Node {
 
 // becomeFollower -- Transit from Candidate to Follower
 func (n *Node) BecomeFollower(term int) {
-	log.Printf("Node %d: Becoming Follower for term %d", n.Id, term)
+	// log.Printf("Node %d: Becoming Follower for term %d", n.Id, term)
 	n.SetState(Follower)
 	n.SetCurrentTerm(term)
 	n.SetVotedFor(-1)
@@ -54,7 +54,7 @@ func (n *Node) BecomeLeader() {
 func (n *Node) BecomeCandidate() {
 	//! : StartElection logic is moved to here
 	if n.State == Follower || n.State == Candidate {
-		log.Printf("Node %d: Transitioning to Candidate for term %d", n.Id, n.CurrentTerm)
+		// log.Printf("Node %d: Transitioning to Candidate for term %d", n.Id, n.CurrentTerm)
 		n.SetState(Candidate)
 		n.IncrementCurrentTerm()
 		n.SetVotedFor(n.Id)
