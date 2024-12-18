@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/rpc"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -46,7 +45,7 @@ func findLeader(nodes []string) (string, *rpc.Client, error) {
 
 func main() {
 	// Add a startup delay to allow nodes to initialize
-	startupDelay := 10 * time.Second
+	startupDelay := 1 * time.Second
 	log.Printf("Waiting %v for nodes to start up...", startupDelay)
 	time.Sleep(startupDelay)
 
@@ -131,11 +130,6 @@ func main() {
 			client = nil // Reset the client to trigger reconnection
 			continue
 		}
-
-		// Print the response from the leader
-		fmt.Printf("Response from leader: %s\n", strconv.FormatBool(reply))
-		
-		SendChatLogsRPC(leader)
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/rpc"
 	"time"
+	"os"
 )
 
 var successChan = make(chan bool, 100)
@@ -233,6 +234,7 @@ func (leader *Node) UpdateCommitIndex() {
 			leader.CommitIndex = N
 			log.Printf("Leader Node %d updated commitIndex to %d", leader.Id, leader.CommitIndex)
 			leader.ApplyCommittedEntries()
+			// leader.SendChatLogsRPC(leader.Id)
 		}
 	}
 }
@@ -243,6 +245,27 @@ func (leader *Node) ApplyCommittedEntries() {
 		//entry := leader.Log[leader.LastApplied]
 		//log.Printf("Leader Node %d applied log entry at index %d: %s", leader.Id, leader.LastApplied, entry.Command)
 		// Optionally write to persistent storage here
+
+
+
+		file, err := os.OpenFile("example.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		message := leader.Log[leader.CommitIndex].Command
+		text := fmt.Sprintf("%v", message)
+
+		if _, err := file.Write([]byte(text + "\n")); err != nil {
+			log.Fatal(err)
+		}
+		if err := file.Close(); err != nil {
+			log.Fatal(err)
+		}
+		file.Close()
+
+
+
 	}
 }
 
