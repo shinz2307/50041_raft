@@ -100,7 +100,6 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 		reply.Term = n.CurrentTerm
 		reply.Success = false
 		return nil
-		log.Printf("Node %d is appending the first entry. PrevLogIndex is: %d.", n.Id, args.PrevLogIndex)
 	}
 
 	// Append new entries to the followers log

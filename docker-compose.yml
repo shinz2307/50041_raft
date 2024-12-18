@@ -68,6 +68,8 @@ services:
     tty: true # Allocates a pseudo-TTY
     container_name: client0
     command: ["./client"] # Run the client binary
+    environment:
+      - NAME=Carina
     depends_on: # Ensure the client waits for the cluster to start
       - app0
       - app1
