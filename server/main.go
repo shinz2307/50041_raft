@@ -39,6 +39,11 @@ func main() {
 	go node.RunAsFollower()
 
 	// Prevent main from exiting
+
+	// time.Sleep(10 * time.Second)
+	// if node.State == Leader {
+	// 	node.Failed = true
+	// }
 	select {}
 }
 
@@ -64,7 +69,7 @@ func initializeSingleNode(nodeID int, peers []int) *Node {
 	node.SetTimeoutOrHeartbeatInterval()
 
 	node.Log = []LogEntry{}
-	node.CurrentTerm = 1
+	node.CurrentTerm = 0
 	node.LeaderID = -1
 	return node
 }

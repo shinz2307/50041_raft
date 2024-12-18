@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/rpc"
@@ -16,6 +17,7 @@ type FileRequest struct {
 type FileResponse struct {
 	Content []byte
 }
+
 // findLeader tries to discover the leader by iterating through all nodes.
 func findLeader(nodes []string) (string, *rpc.Client, error) {
 	for _, address := range nodes {
@@ -45,7 +47,7 @@ func findLeader(nodes []string) (string, *rpc.Client, error) {
 
 func main() {
 	// Add a startup delay to allow nodes to initialize
-	startupDelay := 1 * time.Second
+	startupDelay := 6 * time.Second
 	log.Printf("Waiting %v for nodes to start up...", startupDelay)
 	time.Sleep(startupDelay)
 
@@ -57,13 +59,19 @@ func main() {
 
 	user := os.Getenv("NAME")
 
+	// Error testing for file
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Failed to get working directory: %v", err)
+	}
+	log.Printf("Current working directory: %s", dir)
+
 	// Initial leader discovery
 	leader, client, err = findLeader(nodes) // Leader is a string. Address
 	if err != nil {
 		log.Fatalf("Could not find the leader after checking all nodes: %v", err)
 	}
 	defer client.Close()
-
 
 	// Found leader
 
@@ -103,8 +111,7 @@ func main() {
 		}
 
 		if commandType[0] == 'R' {
-			// Call SingleNode.HandleClientRead for Read commands
-			err = client.Call("SingleNode.HandleClientRead", &commandType, &reply)
+			GetChatLogsRPC(client, leader, commandType)
 		} else if commandType[0] == 'W' {
 			// Read write data from the user
 			fmt.Print("Enter your message, or 'exit' to quit: ")
@@ -121,6 +128,9 @@ func main() {
 
 			// Call SingleNode.HandleClientWrite for Write commands
 			err = client.Call("SingleNode.HandleClientWrite", log, &reply)
+
+			time.Sleep(1 * time.Second)
+			GetChatLogsRPC(client, leader, commandType)
 		}
 
 		// Handle RPC errors
@@ -133,7 +143,47 @@ func main() {
 	}
 }
 
+func GetChatLogsRPC(client *rpc.Client, leader string, commandType string) {
+	// Call SingleNode.HandleClientRead for Read commands
+	var response string
+	err := client.Call("SingleNode.HandleClientRead", &commandType, &response)
+	if err != nil {
+		log.Printf("Failed to send command to leader (%s): %v", leader, err)
+		return
+	}
 
+	var logs []struct {
+		Term    int    `json:"term"`
+		Command string `json:"command"`
+	}
+
+	// Parse the JSON response
+	err = json.Unmarshal([]byte(response), &logs)
+	if err != nil {
+		log.Printf("Failed to parse logs: %v", err)
+		return
+	}
+
+	log.Printf("Logs from leader: %v", logs)
+
+	// Append logs to a file
+	file, err := os.Create("logs/logs.txt")
+	if err != nil {
+		log.Printf("Failed to open logs.txt: %v", err)
+		return
+	}
+	defer file.Close()
+
+	// Write each log entry to the file
+	for _, logEntry := range logs {
+		_, err := file.WriteString(fmt.Sprintf("Term: %d, %s\n", logEntry.Term, logEntry.Command))
+		if err != nil {
+			log.Printf("Failed to write to logs.txt: %v", err)
+			break
+		}
+	}
+	log.Println("Logs successfully appended to logs.txt")
+}
 
 func SendChatLogsRPC(leaderID string) string { // Assume we know the ID of the leader
 	leader, err := rpc.Dial("tcp", leaderID)

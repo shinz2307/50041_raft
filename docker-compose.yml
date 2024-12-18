@@ -7,7 +7,7 @@ services:
     container_name: app0
     command: ["./main"]
     ports:
-      - "5000:5000" # Expose the port for this node
+      - "50000:50000" # Expose the port for this node
     environment:
       - NODE_ID=0
       - PEERS=0,1,2,3,4
@@ -19,7 +19,7 @@ services:
     container_name: app1
     command: ["./main"]
     ports:
-      - "5001:5001"
+      - "50001:50001"
     environment:
       - NODE_ID=1
       - PEERS=0,1,2,3,4
@@ -31,7 +31,7 @@ services:
     container_name: app2
     command: ["./main"]
     ports:
-      - "5002:5002"
+      - "50002:50002"
     environment:
       - NODE_ID=2
       - PEERS=0,1,2,3,4
@@ -43,7 +43,7 @@ services:
     container_name: app3
     command: ["./main"]
     ports:
-      - "5003:5003"
+      - "50003:50003"
     environment:
       - NODE_ID=3
       - PEERS=0,1,2,3,4
@@ -55,7 +55,7 @@ services:
     container_name: app4
     command: ["./main"]
     ports:
-      - "5004:5004"
+      - "50004:50004"
     environment:
       - NODE_ID=4
       - PEERS=0,1,2,3,4
@@ -76,3 +76,24 @@ services:
       - app2
       - app3
       - app4
+    volumes:
+      - ./logs:/app/logs
+
+  client1:
+    build:
+      context: ./client
+      dockerfile: ./Dockerfile.client # Use the new Dockerfile for the client
+    stdin_open: true # Keeps stdin open
+    tty: true # Allocates a pseudo-TTY
+    container_name: client1
+    command: ["./client"] # Run the client binary
+    environment:
+      - NAME=JK
+    depends_on: # Ensure the client waits for the cluster to start
+      - app0
+      - app1
+      - app2
+      - app3
+      - app4
+    volumes:
+      - ./logs:/app/logs

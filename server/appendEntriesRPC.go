@@ -3,11 +3,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/rpc"
-	"time"
 	"os"
+	"time"
 )
 
 var successChan = make(chan bool, 100)
@@ -44,7 +45,7 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 	if len(args.Entries) == 0 {
 		reply.Term = n.CurrentTerm
 		reply.Success = true
-		//log.Printf("Node %d received heartbeat from Leader %d", n.Id, args.LeaderID)
+		log.Printf("Node %d received heartbeat from Leader %d", n.Id, args.LeaderID)
 		n.ResetStopwatchStartTime()
 		return nil
 	}
@@ -170,7 +171,7 @@ func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) error {
 	var reply AppendEntriesResponse
 	err := leader.CallAppendEntriesRPC(peerID, args, &reply)
 	if err != nil {
-		log.Printf("Leader Node %d failed to send AppendEntries to Node %d: %v\n", leader.Id, peerID, err)
+		//log.Printf("Leader Node %d failed to send AppendEntries to Node %d: %v\n", leader.Id, peerID, err)
 		return nil
 	}
 
@@ -246,8 +247,6 @@ func (leader *Node) ApplyCommittedEntries() {
 		//log.Printf("Leader Node %d applied log entry at index %d: %s", leader.Id, leader.LastApplied, entry.Command)
 		// Optionally write to persistent storage here
 
-
-
 		file, err := os.OpenFile("example.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatal(err)
@@ -263,8 +262,6 @@ func (leader *Node) ApplyCommittedEntries() {
 			log.Fatal(err)
 		}
 		file.Close()
-
-
 
 	}
 }
@@ -284,6 +281,10 @@ func (n *Node) CallAppendEntriesRPC(peerID int, args *AppendEntriesRequest, repl
 
 // SendHeartbeats sends an empty AppendEntries RPC to all followers as a heartbeat.
 func (n *Node) SendHeartbeats() {
+	if n.Failed {
+		log.Printf("Node %d: Simulating failure. No heartbeats sent.\n", n.Id)
+		return
+	}
 	for _, peerID := range n.Peers {
 		if peerID == n.Id {
 			continue // Skip self
@@ -330,14 +331,21 @@ func (n *Node) HandleClientWrite(command *string, reply *bool) error {
 
 // HandleClientRead processes a client read request.
 // For now, it simply logs the request and returns success.
-func (n *Node) HandleClientRead(command *string, reply *bool) error {
+func (n *Node) HandleClientRead(command *string, reply *string) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
 	log.Printf("HandleClientRead: Received command: %s", *command)
 
+	// Convert logs to JSON
+	logsJSON, err := json.Marshal(n.Log)
+	if err != nil {
+		return err
+	}
+
 	// For now, just log the read request and return success.
-	*reply = true
+	// *reply = n.Log
+	*reply = string(logsJSON) // Send logs as a JSON string
 	return nil
 }
 

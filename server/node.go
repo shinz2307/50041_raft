@@ -167,11 +167,13 @@ func (n *Node) BeginStateTimer() {
 
 	n.ResetStopwatchStartTime() // Start stopwatch when timer begins
 
-	timer := time.NewTimer(n.TimeoutOrHeartbeatInterval)
+	ticker := time.NewTicker(n.TimeoutOrHeartbeatInterval)
 	go func() {
+		defer ticker.Stop() // Ensure ticker is stopped when function exits
+
 		for {
 			select {
-			case <-timer.C: // Block the code until this line; when timer expires
+			case <-ticker.C:
 				n.mu.Lock()
 				elapsedTime := time.Since(n.stopwatchStartTime)
 				n.mu.Unlock()
@@ -180,18 +182,13 @@ func (n *Node) BeginStateTimer() {
 					if elapsedTime >= n.TimeoutOrHeartbeatInterval {
 						log.Printf("Node %d's stopwatch exceeded timeout. Becoming Candidate.\n", n.Id)
 						n.BecomeCandidate()
-						// DO NOT RETURN. Because we want to permanently loop.
 					}
-
 				} else if n.State == Leader {
-					//log.Printf("Node %d is the Leader. Sending heartbeat.\n", n.Id)
 					n.SendHeartbeats()
-					timer.Reset(n.TimeoutOrHeartbeatInterval)
-					// DO NOT RETURN. Because we want to permanently loop.
 				}
 
-			case <-n.QuitChannel: // This is for manual stopping. If we want we need to implement a quit signal
-				timer.Stop()
+			case <-n.QuitChannel: // Graceful exit when quit signal is received
+				log.Printf("Node %d: Timer stopped by quit signal.\n", n.Id)
 				return
 			}
 		}

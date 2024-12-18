@@ -50,13 +50,13 @@ func (n *Node) RunAsLeader() {
 			log.Printf("Leader Node %d received client command: %s\n", n.Id, command)
 
 			// Call HandleClientCommand as an RPC-like internal function
-			reply := false
-			err := n.HandleClientRead(&command, &reply)
-			if err != nil {
-				log.Printf("Error handling client command on Node %d: %v\n", n.Id, err)
-			} else if reply {
-				log.Printf("Leader Node %d successfully processed client command: %s\n", n.Id, command)
-			}
+			// var reply []LogEntry
+			// //err := n.HandleClientRead(&command, &reply)
+			// if err != nil {
+			// 	log.Printf("Error handling client command on Node %d: %v\n", n.Id, err)
+			// } else {
+			// 	log.Printf("Leader Node %d successfully processed client command: %s\n", n.Id, command)
+			// }
 		case <-n.QuitChannel:
 			log.Printf("Leader Node %d is stopping\n", n.Id)
 			return

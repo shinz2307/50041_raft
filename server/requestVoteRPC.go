@@ -81,10 +81,16 @@ func (n *Node) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) error
 
 	reply.Term = n.CurrentTerm
 
-	if n.CurrentTerm > args.Term {
+	if n.VotedFor == args.CandidateID {
+		reply.VoteGranted = true
+		log.Println("Voted for candidate previously")
+	} else if n.CurrentTerm > args.Term {
 		reply.VoteGranted = false
 		log.Printf("Node %d denies vote to Node %d: current term %d is > the candidate's term %d\n", n.Id, args.CandidateID, n.CurrentTerm, args.Term)
-	} else if (n.VotedFor == -1 || n.VotedFor == args.CandidateID) && n.CommitIndex <= args.LastLogIndex {
+	} else if n.CurrentTerm < args.Term && (n.VotedFor == -1) {
+		reply.VoteGranted = true
+		log.Printf("Node %d voted for %d", n.Id, args.CandidateID)
+	} else if n.CurrentTerm == args.Term && n.CommitIndex < args.LastLogIndex && (n.VotedFor == -1) {
 		// We take -1 as NULL
 		// We also use the last log index as a measure for "updated-ness"
 		reply.VoteGranted = true
@@ -95,10 +101,9 @@ func (n *Node) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) error
 
 		// Following is just for LOGGING!:
 		log.Printf("Node %d votes false to Node %d for term %d. Reasons:\n", n.Id, args.CandidateID, args.Term)
-		if n.CurrentTerm <= args.Term {
+		if !(n.CurrentTerm > args.Term) {
 			log.Printf("\t- The candidate's term > this node (the candidate's term: %d, current term: %d) BUT\n", args.Term, n.CurrentTerm)
-		}
-		if n.VotedFor != -1 && n.VotedFor != args.CandidateID {
+		} else if !((n.VotedFor == -1 || n.VotedFor == args.CandidateID) && n.CommitIndex <= args.LastLogIndex) {
 			log.Printf("\t- Already voted for another candidate (voted for: %d, the candidate: %d)\n", n.VotedFor, args.CandidateID)
 		}
 		if n.CommitIndex > args.LastLogIndex {
