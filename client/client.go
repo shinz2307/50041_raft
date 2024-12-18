@@ -71,8 +71,6 @@ func main() {
 	// should then demand the leader to update the client for updated logs
 	log.Printf("Loading chat...")
 	SendChatLogsRPC(leader)
-	log.Printf("Loaded chat.")
-
 
 	// Interactive loop for user input
 	for {
@@ -136,6 +134,8 @@ func main() {
 
 		// Print the response from the leader
 		fmt.Printf("Response from leader: %s\n", strconv.FormatBool(reply))
+		
+		SendChatLogsRPC(leader)
 	}
 }
 
