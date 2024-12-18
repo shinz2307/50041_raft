@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/rpc"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -54,6 +56,8 @@ func main() {
 	var client *rpc.Client
 	var err error
 
+	user := os.Getenv("NAME")
+
 	// Initial leader discovery
 	leader, client, err = findLeader(nodes) // Leader is a string. Address
 	if err != nil {
@@ -91,45 +95,47 @@ func main() {
 
 		// Handle Read ('R') or Write ('W') command
 		var reply bool
-        if client == nil {
-            log.Println("Client connection is nil. Reconnecting to leader...")
-            leader, client, err = findLeader(nodes)
-            if err != nil {
-                log.Printf("Failed to re-discover the leader: %v", err)
-                time.Sleep(2 * time.Second) // Wait before retrying
-                continue
-            }
-        }
+		if client == nil {
+			log.Println("Client connection is nil. Reconnecting to leader...")
+			leader, client, err = findLeader(nodes)
+			if err != nil {
+				log.Printf("Failed to re-discover the leader: %v", err)
+				time.Sleep(2 * time.Second) // Wait before retrying
+				continue
+			}
+		}
 
-        if commandType[0] == 'R' {
-            // Call SingleNode.HandleClientRead for Read commands
-            err = client.Call("SingleNode.HandleClientRead", &commandType, &reply)
-        } else if commandType[0] == 'W' {
-            // Read write data from the user
-            fmt.Print("Enter your message, or 'exit' to quit: ")
-            var commandMsg string
-            fmt.Scanln(&commandMsg)
+		if commandType[0] == 'R' {
+			// Call SingleNode.HandleClientRead for Read commands
+			err = client.Call("SingleNode.HandleClientRead", &commandType, &reply)
+		} else if commandType[0] == 'W' {
+			// Read write data from the user
+			fmt.Print("Enter your message, or 'exit' to quit: ")
+			var commandMsg string
+			fmt.Scanln(&commandMsg)
 
-            // Exit condition
-            if strings.ToLower(commandMsg) == "exit" {
-                fmt.Println("Exiting...")
-                break
-            }
+			// Exit condition
+			if strings.ToLower(commandMsg) == "exit" {
+				fmt.Println("Exiting...")
+				break
+			}
 
-            // Call SingleNode.HandleClientWrite for Write commands
-            err = client.Call("SingleNode.HandleClientWrite", &commandMsg, &reply)
-        }
+			log := fmt.Sprintf("%s: %s", user, commandMsg)
 
-        // Handle RPC errors
-        if err != nil {
-            log.Printf("Failed to send command to leader (%s): %v", leader, err)
-            client.Close()
-            client = nil // Reset the client to trigger reconnection
-            continue
-        }
+			// Call SingleNode.HandleClientWrite for Write commands
+			err = client.Call("SingleNode.HandleClientWrite", log, &reply)
+		}
 
-        // Print the response from the leader
-        fmt.Printf("Response from leader: %s\n", reply)
+		// Handle RPC errors
+		if err != nil {
+			log.Printf("Failed to send command to leader (%s): %v", leader, err)
+			client.Close()
+			client = nil // Reset the client to trigger reconnection
+			continue
+		}
+
+		// Print the response from the leader
+		fmt.Printf("Response from leader: %s\n", strconv.FormatBool(reply))
 	}
 }
 
