@@ -6,7 +6,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	
 )
 
 func main() {
@@ -39,10 +38,10 @@ func main() {
 	go node.StartSingleRPCServer()
 	go node.RunAsFollower()
 
-
 	// Prevent main from exiting
 	select {}
 }
+
 // parsePeers parses a comma-separated string of peer IDs into a slice of integers
 func parsePeers(peersEnv string) []int {
 	peerStrings := strings.Split(peersEnv, ",")

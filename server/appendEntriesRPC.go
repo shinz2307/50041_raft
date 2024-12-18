@@ -189,9 +189,14 @@ func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) error {
 			//log.Printf("Leader Node %d successfully replicated entries to Node %d", leader.Id, peerID)
 			leader.mu.Lock()
 			leader.NextIndex[peerID] = len(leader.Log)
+			leader.MatchIndex[peerID] = len(leader.Log) - 1 // Highest replicated entry
 			leader.mu.Unlock()
+
+			// Update commitIndex after successful replication
+			leader.UpdateCommitIndex()
 		}
-	} else { //Handle Failure
+	}
+	if !reply.Success { //Handle Failure
 		log.Printf("reply.Success = fail")
 		log.Printf("Leader Node %d: AppendEntries to Node %d failed due to inconsistency. Retrying with decremented NextIndex.\n", leader.Id, peerID)
 		leader.mu.Lock()
@@ -204,6 +209,41 @@ func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) error {
 		leader.SendAppendEntries(peerID, leader.Log)
 	}
 	return nil
+}
+func (leader *Node) UpdateCommitIndex() {
+	leader.mu.Lock()
+	defer leader.mu.Unlock()
+
+	// log.Printf("leader.CommitIndex: %d\n", leader.CommitIndex)
+	// log.Printf("leader.log: %d\n", len(leader.Log))
+	for N := leader.CommitIndex; N < len(leader.Log); N++ {
+		matchCount := 1 // Leader counts itself
+		for _, peerID := range leader.Peers {
+			if peerID == leader.Id {
+				continue
+			}
+			if leader.MatchIndex[peerID] >= N {
+				matchCount++
+			}
+		}
+		// log.Printf("matchCount: %d\n", matchCount)
+
+		// Check majority and current term
+		if matchCount > len(leader.Peers)/2 && leader.Log[N].Term == leader.CurrentTerm {
+			leader.CommitIndex = N
+			log.Printf("Leader Node %d updated commitIndex to %d", leader.Id, leader.CommitIndex)
+			leader.ApplyCommittedEntries()
+		}
+	}
+}
+
+func (leader *Node) ApplyCommittedEntries() {
+	for leader.LastApplied < leader.CommitIndex {
+		leader.LastApplied++
+		//entry := leader.Log[leader.LastApplied]
+		//log.Printf("Leader Node %d applied log entry at index %d: %s", leader.Id, leader.LastApplied, entry.Command)
+		// Optionally write to persistent storage here
+	}
 }
 
 // CallAppendEntriesRPC performs the actual RPC call to AppendEntries on the follower.
@@ -234,7 +274,7 @@ func (n *Node) SendHeartbeats() {
 func (n *Node) HandleClientWrite(command *string, reply *bool) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
-    log.Printf("HandleClientWrite\n")
+	log.Printf("HandleClientWrite\n")
 	// Append the command to the leader's log
 	entry := LogEntry{
 		Command: *command, // Dereference the pointer to get the string
@@ -243,18 +283,14 @@ func (n *Node) HandleClientWrite(command *string, reply *bool) error {
 	n.Log = append(n.Log, entry)
 	log.Printf("Leader Node %d appended command: %s", n.Id, *command)
 
-	// Goroutine to monitor successes and trigger a function on threshold
-	go func() {
-		successCount := 0
-		for range successChan {
-			successCount++
-			if successCount >= len(n.Peers)/2+1 {
-				// Commit entries number of replies is more than half
-				n.CommitEntries()
-				successCount = 0
-			}
-		}
-	}()
+	// // Goroutine to monitor successes and trigger a function on threshold
+	// go func() {
+	// 	if n.Success >= len(n.Peers)/2+1 {
+	// 		// Commit entries number of replies is more than half
+	// 		n.CommitEntries()
+	// 		n.Success = 0
+	// 	}
+	// }()
 
 	// Send AppendEntries to all followers with the new entry
 	for _, peerID := range n.Peers {
@@ -268,23 +304,52 @@ func (n *Node) HandleClientWrite(command *string, reply *bool) error {
 	*reply = true
 	return nil
 }
+
 // HandleClientRead processes a client read request.
 // For now, it simply logs the request and returns success.
 func (n *Node) HandleClientRead(command *string, reply *bool) error {
-    n.mu.Lock()
-    defer n.mu.Unlock()
+	n.mu.Lock()
+	defer n.mu.Unlock()
 
-    log.Printf("HandleClientRead: Received command: %s", *command)
+	log.Printf("HandleClientRead: Received command: %s", *command)
 
-    // For now, just log the read request and return success.
-    *reply = true
-    return nil
+	// For now, just log the read request and return success.
+	*reply = true
+	return nil
 }
 
-func (n *Node) CommitEntries() {
-	n.CommitIndex += 1
-	//log.Printf("Commitindex is now %d", n.CommitIndex)
-}
+// func (n *Node) CommitEntries() {
+// 	n.mu.Lock()
+// 	defer n.mu.Unlock()
+
+// 	// Ensure we commit only up to the available log entries
+// 	if n.CommitIndex < len(n.Log) {
+// 		// Get the log entry to commit
+// 		committedEntry := n.Log[n.CommitIndex]
+
+// 		// Open the log.txt file for appending
+// 		file, err := os.OpenFile("log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+// 		if err != nil {
+// 			log.Printf("Node %d failed to open log.txt: %v", n.Id, err)
+// 			return
+// 		}
+// 		defer file.Close()
+
+// 		// Write the log entry to the file
+// 		_, err = file.WriteString(fmt.Sprintf("Term: %d, Command: %s\n", committedEntry.Term, committedEntry.Command))
+// 		if err != nil {
+// 			log.Printf("Node %d failed to write to log.txt: %v", n.Id, err)
+// 			return
+// 		}
+
+// 		log.Printf("Node %d committed log entry: %v", n.Id, committedEntry)
+
+// 		// Increment the commit index
+// 		n.CommitIndex++
+// 	} else {
+// 		log.Printf("Node %d has no new entries to commit", n.Id)
+// 	}
+// }
 
 func min(a, b int) int {
 	if a < b {

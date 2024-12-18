@@ -6,6 +6,8 @@ services:
       dockerfile: Dockerfile.server
     container_name: app0
     command: ["./main"]
+    ports:
+      - "55000:55000" # Expose the port for this node
     environment:
       - NODE_ID=0
       - PEERS=0,1,2,3,4
@@ -16,6 +18,8 @@ services:
       dockerfile: Dockerfile.server
     container_name: app1
     command: ["./main"]
+    ports:
+      - "55001:55001"
     environment:
       - NODE_ID=1
       - PEERS=0,1,2,3,4
@@ -26,6 +30,8 @@ services:
       dockerfile: Dockerfile.server
     container_name: app2
     command: ["./main"]
+    ports:
+      - "55002:55002"
     environment:
       - NODE_ID=2
       - PEERS=0,1,2,3,4
@@ -36,6 +42,8 @@ services:
       dockerfile: Dockerfile.server
     container_name: app3
     command: ["./main"]
+    ports:
+      - "55003:55003"
     environment:
       - NODE_ID=3
       - PEERS=0,1,2,3,4
@@ -46,6 +54,8 @@ services:
       dockerfile: Dockerfile.server
     container_name: app4
     command: ["./main"]
+    ports:
+      - "55004:55004"
     environment:
       - NODE_ID=4
       - PEERS=0,1,2,3,4

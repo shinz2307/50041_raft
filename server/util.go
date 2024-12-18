@@ -16,10 +16,12 @@ func (n *Node) RunAsLeader() {
 
 	// Initialise NextIndex map
 	n.NextIndex = make(map[int]int)
+	n.MatchIndex = make(map[int]int)
 	for _, peerID := range n.Peers {
 		if peerID != n.Id {
 			// Initialising NextIndex for each peer to the length of the leader's log
 			n.NextIndex[peerID] = len(n.Log)
+			n.MatchIndex[peerID] = n.CommitIndex - 1
 		}
 	}
 	log.Printf("Node %d initialised NextIndex: %v", n.Id, n.NextIndex)
