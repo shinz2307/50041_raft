@@ -23,7 +23,7 @@ type RequestVoteReply struct {
 
 // Function will run on candidate's
 func (n *Node) SendRequestVoteRPCs() {
-	log.Printf("Node %d sends out RequestVoteRPCs for term %d", n.Id, n.CurrentTerm)
+	// log.Printf("Node %d sends out RequestVoteRPCs for term %d", n.Id, n.CurrentTerm)
 
 	var lastLogIndex int
 	var lastLogTerm int
@@ -65,7 +65,7 @@ func (n *Node) SendRequestVoteRPCs() {
 // Function will run on the candidate's
 func (n *Node) CallRequestVoteRPC(peerID int, args *RequestVoteArgs, reply *RequestVoteReply) error {
 	address := fmt.Sprintf("app%d:8080", peerID)
-	log.Printf("Sending RequestVoteRPC to %v\n", address)
+	// log.Printf("Sending RequestVoteRPC to %v\n", address)
 	client, err := rpc.Dial("tcp", address) // Establish an RPC connection to the follower node
 	if err != nil {                         // Handle connection error
 		return err

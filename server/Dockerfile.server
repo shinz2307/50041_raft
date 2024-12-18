@@ -8,6 +8,7 @@ WORKDIR /app
 # Copy the Go modules and download dependencies
 COPY go.mod  ./
 RUN go mod download
+RUN touch /app/example.txt
 
 # Copy the entire application code
 COPY . .

@@ -50,24 +50,24 @@ func (n *Node) CountVote(reply *RequestVoteReply) {
 	// n.startElection(): return -1
 
 	if n.State == Leader { // This is to ignore any more vote counts. This node is already a leader
-		log.Printf("Node %d received a vote but is already a leader!", n.Id)
+		// log.Printf("Node %d received a vote but is already a leader!", n.Id)
 		return
 	}
 
 	// So if the incoming reply is from a more updated node, this node transits to follower
 	if reply.Term > n.CurrentTerm {
-		log.Printf("Node %d received a reply for RequestVoteRPC: but it has a higher term! This node becomes a follower!", n.Id)
+		// log.Printf("Node %d received a reply for RequestVoteRPC: but it has a higher term! This node becomes a follower!", n.Id)
 		n.BecomeFollower(reply.Term)
 		return
 	}
 
 	if reply.VoteGranted {
-		log.Printf("Node %d has received a VoteGranted!\n", n.Id)
+		// log.Printf("Node %d has received a VoteGranted!\n", n.Id)
 
 		n.IncrementVoteCount()
-		log.Printf("Node %d current vote count: %d\n", n.Id, n.VoteCount)
+		// log.Printf("Node %d current vote count: %d\n", n.Id, n.VoteCount)
 		if n.VoteCount > len(n.Peers)/2 {
-			log.Printf("Node %d has majority of votes!\n", n.Id)
+			// log.Printf("Node %d has majority of votes!\n", n.Id)
 			n.BecomeLeader()
 		}
 	}

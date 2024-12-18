@@ -194,13 +194,13 @@ func (n *Node) BeginStateTimer() {
 
 				if n.State == Follower || n.State == Candidate {
 					if elapsedTime >= n.TimeoutOrHeartbeatInterval {
-						log.Printf("Node %d's stopwatch exceeded timeout. Becoming Candidate.\n", n.Id)
+						// log.Printf("Node %d's stopwatch exceeded timeout. Becoming Candidate.\n", n.Id)
 						n.BecomeCandidate()
 						// DO NOT RETURN. Because we want to permanently loop.
 					}
 
 				} else if n.State == Leader {
-					log.Printf("Node %d is the Leader. Sending heartbeat.\n", n.Id)
+					// log.Printf("Node %d is the Leader. Sending heartbeat.\n", n.Id)
 					n.SendHeartbeats()
 					timer.Reset(n.TimeoutOrHeartbeatInterval)
 					// DO NOT RETURN. Because we want to permanently loop.

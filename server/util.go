@@ -12,7 +12,7 @@ import (
 )
 
 func (n *Node) RunAsLeader() {
-	log.Printf("Node %d finished transition tasks. Now runs as Leader\n", n.Id)
+	// log.Printf("Node %d finished transition tasks. Now runs as Leader\n", n.Id)
 
 	// Initialise NextIndex map
 	n.mu.Lock()
@@ -47,28 +47,28 @@ func (n *Node) RunAsLeader() {
 		}
 	}
 	for {
-		log.Printf("Node %d is now listening for client commands\n", n.Id)
-		select {
-		case command := <-n.CommandChannel: // Receive a command from the client
-			log.Printf("Leader Node %d received client command: %s\n", n.Id, command)
+		// log.Printf("Node %d is now listening for client commands\n", n.Id)
+		// select {
+		// case command := <-n.CommandChannel: // Receive a command from the client
+		// 	log.Printf("Leader Node %d received client command: %s\n", n.Id, command)
 
-			// Call HandleClientCommand as an RPC-like internal function
-			reply := false
-			err := n.HandleClientCommand(&command, &reply)
-			if err != nil {
-				log.Printf("Error handling client command on Node %d: %v\n", n.Id, err)
-			} else if reply {
-				log.Printf("Leader Node %d successfully processed client command: %s\n", n.Id, command)
-			}
-		case <-n.QuitChannel:
-			log.Printf("Leader Node %d is stopping\n", n.Id)
-			return
-		}
+		// 	// Call HandleClientCommand as an RPC-like internal function
+		// 	reply := false
+		// 	err := n.HandleClientCommand(&command, &reply)
+		// 	if err != nil {
+		// 		log.Printf("Error handling client command on Node %d: %v\n", n.Id, err)
+		// 	} else if reply {
+		// 		log.Printf("Leader Node %d successfully processed client command: %s\n", n.Id, command)
+		// 	}
+		// case <-n.QuitChannel:
+		// 	log.Printf("Leader Node %d is stopping\n", n.Id)
+		// 	return
+		// }
 	}
 }
 
 func (n *Node) RunAsFollower() {
-	log.Printf("Node %d finished transition tasks. Now runs as Follower.\n", n.Id)
+	// log.Printf("Node %d finished transition tasks. Now runs as Follower.\n", n.Id)
 
 	n.BeginStateTimer()
 	// The following is purely for receiving messages
@@ -92,7 +92,7 @@ func (n *Node) RunAsFollower() {
 }
 
 func (n *Node) RunAsCandidate() {
-	log.Printf("Node %d finished transition tasks. Now runs as Candidate.\n", n.Id)
+	// log.Printf("Node %d finished transition tasks. Now runs as Candidate.\n", n.Id)
 
 	n.BeginStateTimer()
 	// The following is purely for receiving messages

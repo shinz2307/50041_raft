@@ -35,7 +35,7 @@ func main() {
 	// Initialize a single node based on NODE_ID
 	node := initializeSingleNode(nodeID, peers)
 
-	log.Printf("Node %d initialized with peers: %v", nodeID, peers)
+	// log.Printf("Node %d initialized with peers: %v", nodeID, peers)
 	go node.StartSingleRPCServer()
 	go node.RunAsFollower()
 

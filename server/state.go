@@ -3,7 +3,7 @@ package main
 
 import (
 	"fmt"
-	"log"
+	// "log"
 
 )
 
@@ -32,7 +32,7 @@ func (n *Node) BecomeFollower(term int) {
 // becomeLeader -- Transit from Candidate to Leader
 func (n *Node) BecomeLeader() {
 	if n.State == Candidate {
-		log.Printf("Node %d: Transitioning to Leader for term %d", n.Id, n.CurrentTerm)
+		// log.Printf("Node %d: Transitioning to Leader for term %d", n.Id, n.CurrentTerm)
 		// n.IncrementCurrentTerm()
 		n.SetState(Leader)
 		n.SetLeaderID(n.Id)
@@ -46,7 +46,7 @@ func (n *Node) BecomeLeader() {
 		n.RunAsLeader()
 
 	} else if n.State == Follower { // Follower cannot become leader
-		panic(fmt.Sprintf("Node %d cannot become Leader while in Follower state", n.Id))
+		// panic(fmt.Sprintf("Node %d cannot become Leader while in Follower state", n.Id))
 	}
 }
 

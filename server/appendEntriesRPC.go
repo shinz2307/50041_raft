@@ -43,7 +43,7 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 	if len(args.Entries) == 0 {
 		reply.Term = n.CurrentTerm
 		reply.Success = true
-		log.Printf("Node %d received heartbeat from Leader %d", n.Id, args.LeaderID)
+		// log.Printf("Node %d received heartbeat from Leader %d", n.Id, args.LeaderID)
 		n.ResetStopwatchStartTime()
 		return nil
 	}
@@ -62,7 +62,7 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 		// 2. Check if nodes entry at prevLogIndex has the same term as PrevLogTerm
 		if n.Log[args.PrevLogIndex].Term == args.PrevLogTerm {
 			log.Printf("Node %d passed consistency check.", n.Id)
-			log.Printf("PrevLogindex: %d. Length of Entries", args.PrevLogIndex, len(args.Entries))
+			log.Printf("PrevLogindex: %d. Length of Entries: %d", args.PrevLogIndex, len(args.Entries))
 		} else {
 			log.Printf("Node %d failed second consistency check of the term comparison.", n.Id)
 			if args.PrevLogIndex <= len(n.Log) {
@@ -73,10 +73,10 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 			return nil
 		}
 	} else if args.PrevLogIndex == 0 && len(args.Entries) == 1 {
-		log.Printf("Node %d is appending the first entry. PrevLogIndex is: %d.", n.Id, args.PrevLogIndex)
+		// log.Printf("Node %d is appending the first entry. PrevLogIndex is: %d.", n.Id, args.PrevLogIndex)
 
 	} else if args.PrevLogIndex == -1 {
-		log.Printf("End Reached, Node %d will append all entries.", n.Id)
+		// log.Printf("End Reached, Node %d will append all entries.", n.Id)
 
 		for _, entry := range args.Entries {
 			n.Log = append(n.Log, entry)
@@ -100,7 +100,7 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 		reply.Term = n.CurrentTerm
 		reply.Success = false
 		return nil
-		log.Printf("Node %d is appending the first entry. PrevLogIndex is: %d.", n.Id, args.PrevLogIndex)
+		// log.Printf("Node %d is appending the first entry. PrevLogIndex is: %d.", n.Id, args.PrevLogIndex)
 	}
 
 	// Append new entries to the followers log
@@ -132,7 +132,7 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 // SendAppendEntries sends AppendEntries RPC to a specific follower.
 func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) error {
 	leader.mu.Lock()
-	log.Printf("Sending AppendEntries to Node %d. Current nextIndex: %v. Current leader's log: %v", peerID, leader.NextIndex, entries)
+	// log.Printf("Sending AppendEntries to Node %d. Current nextIndex: %v. Current leader's log: %v", peerID, leader.NextIndex, entries)
 
 	var prevLogIndex, prevLogTerm int
 	if leader.NextIndex[peerID] == 0 && len(entries) == 1 {
@@ -231,11 +231,50 @@ func (n *Node) SendHeartbeats() {
 	}
 }
 
+// // HandleClientCommand processes a client command received by the leader.
+// func (n *Node) HandleClientCommand(command *string, reply *bool) error {
+// 	n.mu.Lock()
+// 	defer n.mu.Unlock()
+
+// 	// Append the command to the leader's log
+// 	entry := LogEntry{
+// 		Command: *command, // Dereference the pointer to get the string
+// 		Term:    n.CurrentTerm,
+// 	}
+// 	n.Log = append(n.Log, entry)
+// 	log.Printf("Leader Node %d appended command: %s", n.Id, *command)
+
+// 	// Goroutine to monitor successes and trigger a function on threshold
+// 	go func() {
+// 		successCount := 0
+// 		for range successChan {
+// 			successCount++
+// 			if successCount >= len(n.Peers)/2+1 {
+// 				// Commit entries number of replies is more than half
+// 				n.CommitEntries()
+// 				successCount = 0
+// 			}
+// 		}
+// 	}()
+
+// 	// Send AppendEntries to all followers with the new entry
+// 	for _, peerID := range n.Peers {
+// 		if peerID == n.Id {
+// 			continue // Skip sending to self
+// 		}
+// 		go n.SendAppendEntries(peerID, n.Log)
+// 	}
+
+// 	// Indicate success to the client
+// 	*reply = true
+// 	return nil
+// }
+
 // HandleClientCommand processes a client command received by the leader.
-func (n *Node) HandleClientCommand(command *string, reply *bool) error {
+func (n *Node) HandleClientWrite(command *string, reply *bool) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
-
+	log.Printf("HandleClientWrite\n")
 	// Append the command to the leader's log
 	entry := LogEntry{
 		Command: *command, // Dereference the pointer to get the string
@@ -266,6 +305,19 @@ func (n *Node) HandleClientCommand(command *string, reply *bool) error {
 	}
 
 	// Indicate success to the client
+	*reply = true
+	return nil
+}
+
+// HandleClientRead processes a client read request.
+// For now, it simply logs the request and returns success.
+func (n *Node) HandleClientRead(command *string, reply *bool) error {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	log.Printf("HandleClientRead: Received command: %s", *command)
+
+	// For now, just log the read request and return success.
 	*reply = true
 	return nil
 }
