@@ -156,7 +156,7 @@ func (n *Node) IncrementVoteCount() {
 
 func (n *Node) ResetStopwatchStartTime() {
 
-	log.Printf("Node %d resets its timeout.\n", n.Id)
+	//log.Printf("Node %d resets its timeout.\n", n.Id)
 	n.stopwatchStartTime = time.Now() // Reset stopwatch to current time
 }
 
@@ -183,7 +183,7 @@ func (n *Node) BeginStateTimer() {
 					}
 
 				} else if n.State == Leader {
-					log.Printf("Node %d is the Leader. Sending heartbeat.\n", n.Id)
+					//log.Printf("Node %d is the Leader. Sending heartbeat.\n", n.Id)
 					n.SendHeartbeats()
 					timer.Reset(n.TimeoutOrHeartbeatInterval)
 					// DO NOT RETURN. Because we want to permanently loop.

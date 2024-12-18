@@ -49,7 +49,7 @@ func (n *Node) RunAsLeader() {
 
 			// Call HandleClientCommand as an RPC-like internal function
 			reply := false
-			err := n.HandleClientCommand(&command, &reply)
+			err := n.HandleClientRead(&command, &reply)
 			if err != nil {
 				log.Printf("Error handling client command on Node %d: %v\n", n.Id, err)
 			} else if reply {

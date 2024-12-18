@@ -64,6 +64,8 @@ services:
     build:
       context: ./client
       dockerfile: ./Dockerfile.client # Use the new Dockerfile for the client
+    stdin_open: true # Keeps stdin open
+    tty: true # Allocates a pseudo-TTY
     container_name: client0
     command: ["./client"] # Run the client binary
     depends_on: # Ensure the client waits for the cluster to start
