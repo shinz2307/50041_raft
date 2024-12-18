@@ -83,6 +83,7 @@ type Node struct {
 func (n *Node) IsLeader(_ *struct{}, reply *bool) error { 
 	n.mu.Lock()
 	defer n.mu.Unlock()
+
 	log.Printf("Node %d state: %s", n.Id, n.State.String())
 	*reply = (n.State == Leader)
 	return nil
@@ -97,47 +98,34 @@ func (n *Node) GetLog() []LogEntry {
 }
 
 func (n *Node) SetState(state State) {
-	// log.Printf("Node %d sets me.State = %s\n", n.Id, state)
-	n.mu.Lock()
+	log.Printf("Node %d sets me.State = %s\n", n.Id, state)
 	n.State = state
-	n.mu.Unlock()
 }
 
 func (n *Node) SetCurrentTerm(term int) {
-	// log.Printf("Node %d sets me.CurrentTerm = %d\n", n.Id, term)
-	n.mu.Lock()
+	log.Printf("Node %d sets me.CurrentTerm = %d\n", n.Id, term)
 	n.CurrentTerm = term
-	n.mu.Unlock()
 }
 
 func (n *Node) SetLeaderID(leaderID int) {
-	// log.Printf("Node %d sets me.LeaderID = %d\n", n.Id, leaderID)
-	n.mu.Lock()
+	log.Printf("Node %d sets me.LeaderID = %d\n", n.Id, leaderID)
 	n.LeaderID = leaderID
-	n.mu.Unlock()
 }
 
 func (n *Node) SetVotedFor(votedID int) {
-	// log.Printf("Node %d sets me.VotedFor = Node %d\n", n.Id, votedID)
-	n.mu.Lock()
+	log.Printf("Node %d sets me.VotedFor = Node %d\n", n.Id, votedID)
 	n.VotedFor = votedID
-	n.mu.Unlock()
 }
 
 func (n *Node) SetVoteCount(voteCount int) {
-	// log.Printf("Node %d sets me.VoteCount = %d\n", n.Id, voteCount)
-	n.mu.Lock()
+	log.Printf("Node %d sets me.VoteCount = %d\n", n.Id, voteCount)
 	n.VoteCount = voteCount
-	n.mu.Unlock()
 }
 
 func (n *Node) SetTimeoutOrHeartbeatInterval() {
 	// printTimer := func() {
 	// 	log.Printf("Node %d timeout / heartbeat interval is set to %s\n", n.Id, n.TimeoutOrHeartbeatInterval)
 	// }
-
-	n.mu.Lock()
-	defer n.mu.Unlock()
 
 	switch n.State {
 	case Follower:
@@ -156,31 +144,25 @@ func (n *Node) SetTimeoutOrHeartbeatInterval() {
 }
 
 func (n *Node) IncrementCurrentTerm() {
-	// log.Printf("Node %d increments its current term by 1\n", n.Id)
-	n.mu.Lock()
+	log.Printf("Node %d increments its current term by 1\n", n.Id)
 	n.CurrentTerm++
-	n.mu.Unlock()
 }
 
 func (n *Node) IncrementVoteCount() {
-	// log.Printf("Node %d increments its vote count by 1\n", n.Id)
-	n.mu.Lock()
+	log.Printf("Node %d increments its vote count by 1\n", n.Id)
 	n.VoteCount++
-	n.mu.Unlock()
+
 }
 
 func (n *Node) ResetStopwatchStartTime() {
 
 	//log.Printf("Node %d resets its timeout.\n", n.Id)
-	// log.Printf("Node %d resets its timeout.\n", n.Id)
-	n.mu.Lock()
 	n.stopwatchStartTime = time.Now() // Reset stopwatch to current time
-	n.mu.Unlock()
 }
 
 func (n *Node) BeginStateTimer() {
 	n.SetTimeoutOrHeartbeatInterval()
-	// log.Printf("Node %d begins its state(%s) timer with timeout: %s\n", n.Id, n.State, GetFormatDuration(n.TimeoutOrHeartbeatInterval))
+	log.Printf("Node %d begins its state(%s) timer with timeout: %s\n", n.Id, n.State, GetFormatDuration(n.TimeoutOrHeartbeatInterval))
 
 	n.ResetStopwatchStartTime() // Start stopwatch when timer begins
 

@@ -74,7 +74,7 @@ func main() {
 		}
 
 		// Handle Read ('R') or Write ('W') command
-		var reply string
+		var reply bool
         if client == nil {
             log.Println("Client connection is nil. Reconnecting to leader...")
             leader, client, err = findLeader(nodes)

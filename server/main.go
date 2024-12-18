@@ -64,10 +64,8 @@ func initializeSingleNode(nodeID int, peers []int) *Node {
 	node := NewNode(nodeID, peers) // Peers are all nodes in the cluster
 	node.SetTimeoutOrHeartbeatInterval()
 
-	node.mu.Lock()
 	node.Log = []LogEntry{}
 	node.CurrentTerm = 1
 	node.LeaderID = -1
-	node.mu.Unlock()
 	return node
 }
