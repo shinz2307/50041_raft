@@ -4,8 +4,26 @@ package main
 import (
 	"fmt"
 	"log"
-
+    "os"
 )
+
+type FileRequest struct {
+	Filename string
+}
+
+type FileResponse struct {
+	Content []byte
+}
+
+func (leader *Node) GetFile(request *FileRequest, response *FileResponse) error {
+	content, err := os.ReadFile(request.Filename)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %v", err)
+	}
+	response.Content = content
+	return nil
+}
+
 
 // NewNode -- initialise a new node in the Follower state
 func NewNode(id int, peers []int) *Node {

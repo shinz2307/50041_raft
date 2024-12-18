@@ -8,6 +8,13 @@ import (
 	"time"
 )
 
+type FileRequest struct {
+	Filename string
+}
+
+type FileResponse struct {
+	Content []byte
+}
 // findLeader tries to discover the leader by iterating through all nodes.
 func findLeader(nodes []string) (string, *rpc.Client, error) {
 	for _, address := range nodes {
@@ -48,11 +55,20 @@ func main() {
 	var err error
 
 	// Initial leader discovery
-	leader, client, err = findLeader(nodes)
+	leader, client, err = findLeader(nodes) // Leader is a string. Address
 	if err != nil {
 		log.Fatalf("Could not find the leader after checking all nodes: %v", err)
 	}
 	defer client.Close()
+
+
+	// Found leader
+
+	// should then demand the leader to update the client for updated logs
+	log.Printf("Loading chat...")
+	SendChatLogsRPC(leader)
+	log.Printf("Loaded chat.")
+
 
 	// Interactive loop for user input
 	for {
@@ -115,4 +131,28 @@ func main() {
         // Print the response from the leader
         fmt.Printf("Response from leader: %s\n", reply)
 	}
+}
+
+
+
+func SendChatLogsRPC(leaderID string) string { // Assume we know the ID of the leader
+	leader, err := rpc.Dial("tcp", leaderID)
+	if err != nil {
+		return fmt.Sprintf("Error connecting to leader: %v", err)
+	}
+	defer leader.Close()
+
+	fileRequest := FileRequest{Filename: "example.txt"}
+
+	var fileResponse FileResponse
+
+	err = leader.Call("SingleNode.GetFile", &fileRequest, &fileResponse)
+	if err != nil {
+		fmt.Println("Error calling method:", err)
+		return fmt.Sprintf("Error calling method: %v", err)
+	}
+
+	fmt.Println("File content:")
+	fmt.Println(string(fileResponse.Content))
+	return string(fileResponse.Content)
 }
