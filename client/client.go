@@ -51,6 +51,12 @@ func main() {
 	log.Printf("Waiting %v for nodes to start up...", startupDelay)
 	time.Sleep(startupDelay)
 
+	// Get the client ID from an environment variable
+	clientID := os.Getenv("CLIENT_ID")
+	if clientID == "" {
+		log.Fatalf("CLIENT_ID environment variable is not set")
+	}
+
 	// List of nodes in the cluster
 	nodes := []string{"app0:8080", "app1:8080", "app2:8080", "app3:8080", "app4:8080"}
 	var leader string
@@ -111,7 +117,7 @@ func main() {
 		}
 
 		if commandType[0] == 'R' {
-			GetChatLogsRPC(client, leader, commandType)
+			GetChatLogsRPC(client, leader, commandType, clientID)
 		} else if commandType[0] == 'W' {
 			// Read write data from the user
 			fmt.Print("Enter your message, or 'exit' to quit: ")
@@ -130,7 +136,7 @@ func main() {
 			err = client.Call("SingleNode.HandleClientWrite", log, &reply)
 
 			time.Sleep(1 * time.Second)
-			GetChatLogsRPC(client, leader, commandType)
+			GetChatLogsRPC(client, leader, commandType, clientID)
 		}
 
 		// Handle RPC errors
@@ -143,7 +149,7 @@ func main() {
 	}
 }
 
-func GetChatLogsRPC(client *rpc.Client, leader string, commandType string) {
+func GetChatLogsRPC(client *rpc.Client, leader string, commandType string, clientID string) {
 	// Call SingleNode.HandleClientRead for Read commands
 	var response string
 	err := client.Call("SingleNode.HandleClientRead", &commandType, &response)
@@ -167,9 +173,10 @@ func GetChatLogsRPC(client *rpc.Client, leader string, commandType string) {
 	log.Printf("Logs from leader: %v", logs)
 
 	// Append logs to a file
-	file, err := os.Create("logs/logs.txt")
+	fileName := fmt.Sprintf("logs/log%s.txt", clientID)
+	file, err := os.Create(fileName)
 	if err != nil {
-		log.Printf("Failed to open logs.txt: %v", err)
+		log.Printf("Failed to open log%s.txt: %v", clientID, err)
 		return
 	}
 	defer file.Close()
@@ -178,11 +185,11 @@ func GetChatLogsRPC(client *rpc.Client, leader string, commandType string) {
 	for _, logEntry := range logs {
 		_, err := file.WriteString(fmt.Sprintf("Term: %d, %s\n", logEntry.Term, logEntry.Command))
 		if err != nil {
-			log.Printf("Failed to write to logs.txt: %v", err)
+			log.Printf("Failed to write to log%s.txt: %v", clientID, err)
 			break
 		}
 	}
-	log.Println("Logs successfully appended to logs.txt")
+	log.Printf("Logs successfully appended to log%s.txt", clientID)
 }
 
 func SendChatLogsRPC(leaderID string) string { // Assume we know the ID of the leader

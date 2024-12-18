@@ -1,4 +1,0 @@
-Term: 2, JK: yes
-Term: 2, Carina: hello
-Term: 2, JK: hello
-Term: 2, JK: hello

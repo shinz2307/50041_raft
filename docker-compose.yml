@@ -70,6 +70,7 @@ services:
     command: ["./client"] # Run the client binary
     environment:
       - NAME=Carina
+      - CLIENT_ID=0
     depends_on: # Ensure the client waits for the cluster to start
       - app0
       - app1
@@ -89,6 +90,7 @@ services:
     command: ["./client"] # Run the client binary
     environment:
       - NAME=JK
+      - CLIENT_ID=1
     depends_on: # Ensure the client waits for the cluster to start
       - app0
       - app1
