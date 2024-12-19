@@ -68,6 +68,7 @@ type Node struct {
 	// Leader will use a heartbeat interval (to periodically send out heartbeats). Then this variable becomes that
 
 	stopwatchStartTime time.Time
+	BeginElectionTime time.Time
 
 	HeartbeatInterval time.Duration
 	ElectionTimeout   time.Duration
@@ -197,4 +198,14 @@ func (n *Node) BeginStateTimer() {
 
 func (n *Node) PrintNodeTimer() {
 	log.Printf("Node %d current timeout / heartbeat interval is %s\n", n.Id, n.TimeoutOrHeartbeatInterval)
+}
+
+func (n *Node) logTime(measurementType string, startTime time.Time) { // For scalability test
+	elapsedTime := time.Since(startTime)
+
+	log.Printf("Scalability Test: %s: For %v nodes, the time taken is %.6f ms",
+		measurementType,
+		len(n.Peers)-1,
+		elapsedTime.Seconds()*1000.0,
+	)
 }

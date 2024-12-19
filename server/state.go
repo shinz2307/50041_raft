@@ -4,7 +4,8 @@ package main
 import (
 	"fmt"
 	"log"
-    "os"
+	"os"
+	"time"
 )
 
 type FileRequest struct {
@@ -61,6 +62,9 @@ func (n *Node) BecomeLeader() {
 			n.NextIndex[peerID] = len(n.Log)
 		}
 		//}
+
+		n.logTime("Election Process Time Taken", n.BeginElectionTime)
+
 		n.RunAsLeader()
 
 	} else if n.State == Follower { // Follower cannot become leader
@@ -73,13 +77,12 @@ func (n *Node) BecomeCandidate() {
 	//! : StartElection logic is moved to here
 	if n.State == Follower || n.State == Candidate {
 		log.Printf("Node %d: Transitioning to Candidate for term %d", n.Id, n.CurrentTerm)
+		n.BeginElectionTime = time.Now()
 		n.SetState(Candidate)
 		n.IncrementCurrentTerm()
 		n.SetVotedFor(n.Id)
 		n.SetVoteCount(1)
-
 		n.SendRequestVoteRPCs()
-
 		n.RunAsCandidate()
 	} else if n.State == Leader { // Leader cannot become candidate
 		panic(fmt.Sprintf("Node %d cannot become Candidate while in Leader state", n.Id))

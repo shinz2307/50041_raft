@@ -10,7 +10,10 @@ services:
       - "50000:50000" # Expose the port for this node
     environment:
       - NODE_ID=0
-      - PEERS=0,1,2,3,4
+      # - PEERS=0,1,2,3,4 # Default: 4 peer nodes
+      # - PEERS=0,1,2,3 # Scalability test: 3 peer node
+      # - PEERS=0,1,2,3,4,5 # Scalability test: 5 peer node
+      - PEERS=0,1,2,3,4,5,6,7,8,9,10 # Scalability test: 10 peer node
 
   app1:
     build:
@@ -22,7 +25,10 @@ services:
       - "50001:50001"
     environment:
       - NODE_ID=1
-      - PEERS=0,1,2,3,4
+      # - PEERS=0,1,2,3,4 # Default: 4 peer nodes
+      # - PEERS=0,1,2,3 # Scalability test: 3 peer node
+      # - PEERS=0,1,2,3,4,5 # Scalability test: 5 peer node
+      - PEERS=0,1,2,3,4,5,6,7,8,9,10 # Scalability test: 10 peer node
 
   app2:
     build:
@@ -34,7 +40,10 @@ services:
       - "50002:50002"
     environment:
       - NODE_ID=2
-      - PEERS=0,1,2,3,4
+      # - PEERS=0,1,2,3,4 # Default: 4 peer nodes
+      # - PEERS=0,1,2,3 # Scalability test: 3 peer node
+      # - PEERS=0,1,2,3,4,5 # Scalability test: 5 peer node
+      - PEERS=0,1,2,3,4,5,6,7,8,9,10 # Scalability test: 10 peer node
 
   app3:
     build:
@@ -46,7 +55,10 @@ services:
       - "50003:50003"
     environment:
       - NODE_ID=3
-      - PEERS=0,1,2,3,4
+      # - PEERS=0,1,2,3,4 # Default: 4 peer nodes
+      # - PEERS=0,1,2,3 # Scalability test: 3 peer node
+      # - PEERS=0,1,2,3,4,5 # Scalability test: 5 peer node
+      - PEERS=0,1,2,3,4,5,6,7,8,9,10 # Scalability test: 10 peer node
 
   app4:
     build:
@@ -58,7 +70,104 @@ services:
       - "50004:50004"
     environment:
       - NODE_ID=4
-      - PEERS=0,1,2,3,4
+      # - PEERS=0,1,2,3,4 # Default: 4 peer nodes
+      # - PEERS=0,1,2,3 # Scalability test: 3 peer node
+      # - PEERS=0,1,2,3,4,5 # Scalability test: 5 peer node
+      - PEERS=0,1,2,3,4,5,6,7,8,9,10 # Scalability test: 10 peer node
+  
+
+  app5:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.server
+    container_name: app5
+    command: ["./main"]
+    ports:
+      - "50005:50005"
+    environment:
+      - NODE_ID=5
+      # - PEERS=0,1,2,3,4 # Default: 4 peer nodes
+      # - PEERS=0,1,2,3 # Scalability test: 3 peer node
+      # - PEERS=0,1,2,3,4,5 # Scalability test: 5 peer node
+      - PEERS=0,1,2,3,4,5,6,7,8,9,10 # Scalability test: 10 peer node
+
+  app6:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.server
+    container_name: app6
+    command: ["./main"]
+    ports:
+      - "50006:50006"
+    environment:
+      - NODE_ID=6
+      # - PEERS=0,1,2,3,4 # Default: 4 peer nodes
+      # - PEERS=0,1,2,3 # Scalability test: 3 peer node
+      # - PEERS=0,1,2,3,4,5 # Scalability test: 5 peer node
+      - PEERS=0,1,2,3,4,5,6,7,8,9,10 # Scalability test: 10 peer node
+
+  app7:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.server
+    container_name: app7
+    command: ["./main"]
+    ports:
+      - "50007:50007"
+    environment:
+      - NODE_ID=7
+      # - PEERS=0,1,2,3,4 # Default: 4 peer nodes
+      # - PEERS=0,1,2,3 # Scalability test: 3 peer node
+      # - PEERS=0,1,2,3,4,5 # Scalability test: 5 peer node
+      - PEERS=0,1,2,3,4,5,6,7,8,9,10 # Scalability test: 10 peer node
+
+
+  app8:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.server
+    container_name: app8
+    command: ["./main"]
+    ports:
+      - "50008:50008"
+    environment:
+      - NODE_ID=8
+      # - PEERS=0,1,2,3,4 # Default: 4 peer nodes
+      # - PEERS=0,1,2,3 # Scalability test: 3 peer node
+      # - PEERS=0,1,2,3,4,5 # Scalability test: 5 peer node
+      - PEERS=0,1,2,3,4,5,6,7,8,9,10 # Scalability test: 10 peer node
+
+
+  app9:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.server
+    container_name: app9
+    command: ["./main"]
+    ports:
+      - "50009:50009"
+    environment:
+      - NODE_ID=9
+      # - PEERS=0,1,2,3,4 # Default: 4 peer nodes
+      # - PEERS=0,1,2,3 # Scalability test: 3 peer node
+      # - PEERS=0,1,2,3,4,5 # Scalability test: 5 peer node
+      - PEERS=0,1,2,3,4,5,6,7,8,9,10 # Scalability test: 10 peer node
+
+
+  app10:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.server
+    container_name: app10
+    command: ["./main"]
+    ports:
+      - "50010:50010"
+    environment:
+      - NODE_ID=10
+      # - PEERS=0,1,2,3,4 # Default: 4 peer nodes
+      # - PEERS=0,1,2,3 # Scalability test: 3 peer node
+      # - PEERS=0,1,2,3,4,5 # Scalability test: 5 peer node
+      - PEERS=0,1,2,3,4,5,6,7,8,9,10 # Scalability test: 10 peer node
 
   client0:
     build:
@@ -77,6 +186,12 @@ services:
       - app2
       - app3
       - app4
+      - app5
+      - app6
+      - app7
+      - app8
+      - app9
+      - app10
     volumes:
       - ./logs:/app/logs
 
@@ -97,5 +212,11 @@ services:
       - app2
       - app3
       - app4
+      - app5
+      - app6
+      - app7
+      - app8
+      - app9
+      - app10
     volumes:
       - ./logs:/app/logs

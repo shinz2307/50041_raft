@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/rpc"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -285,13 +286,24 @@ func (n *Node) SendHeartbeats() {
 		log.Printf("Node %d: Simulating failure. No heartbeats sent.\n", n.Id)
 		return
 	}
+	
+	var waitForResponses sync.WaitGroup // For time tracking
+	heartbeatTimeStart := time.Now()
 	for _, peerID := range n.Peers {
 		if peerID == n.Id {
 			continue // Skip self
 		}
-		// Send an empty AppendEntries request (heartbeat) to the follower
-		go n.SendAppendEntries(peerID, []LogEntry{}) // No entries means this is a heartbeat
+
+		waitForResponses.Add(1)
+
+		go func(peer int) {
+			defer waitForResponses.Done()
+			n.SendAppendEntries(peer, []LogEntry{}) // No entries = heartbeat
+		}(peerID)
 	}
+	waitForResponses.Wait()
+
+	n.logTime("Log Replication | Heartbeat Time Taken", heartbeatTimeStart)
 }
 
 // HandleClientCommand processes a client command received by the leader.
@@ -299,6 +311,7 @@ func (n *Node) HandleClientWrite(command *string, reply *bool) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	log.Printf("HandleClientWrite\n")
+	
 	// Append the command to the leader's log
 	entry := LogEntry{
 		Command: *command, // Dereference the pointer to get the string
@@ -321,7 +334,9 @@ func (n *Node) HandleClientWrite(command *string, reply *bool) error {
 		if peerID == n.Id {
 			continue // Skip sending to self
 		}
-		go n.SendAppendEntries(peerID, n.Log)
+		go func(peerID int) {
+			n.SendAppendEntries(peerID, n.Log)
+		}(peerID)
 	}
 
 	// Indicate success to the client

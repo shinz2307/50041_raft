@@ -133,8 +133,8 @@ func main() {
 			log := fmt.Sprintf("%s: %s", user, commandMsg)
 
 			// Call SingleNode.HandleClientWrite for Write commands
+			
 			err = client.Call("SingleNode.HandleClientWrite", log, &reply)
-
 			time.Sleep(1 * time.Second)
 			GetChatLogsRPC(client, leader, commandType, clientID)
 		}
