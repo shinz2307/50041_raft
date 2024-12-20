@@ -346,7 +346,7 @@ func (n *Node) HandleClientRead(command *string, reply *string) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
-	log.Printf("HandleClientRead: Received command: %s", *command)
+	// log.Printf("HandleClientRead: Received command: %s", *command)
 
 	// Convert logs to JSON
 	logsJSON, err := json.Marshal(n.Log)

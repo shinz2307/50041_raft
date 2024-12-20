@@ -23,7 +23,7 @@ func findLeader(nodes []string) (string, *rpc.Client, error) {
 	for _, address := range nodes {
 		client, err := rpc.Dial("tcp", address)
 		if err != nil {
-			log.Printf("Failed to connect to %s: %v", address, err)
+			// log.Printf("Failed to connect to %s: %v", address, err)
 			continue
 		}
 
@@ -31,13 +31,13 @@ func findLeader(nodes []string) (string, *rpc.Client, error) {
 		var isLeader bool
 		err = client.Call("SingleNode.IsLeader", &struct{}{}, &isLeader)
 		if err != nil {
-			log.Printf("Failed to call IsLeader on %s: %v", address, err)
+			// log.Printf("Failed to call IsLeader on %s: %v", address, err)
 			client.Close()
 			continue
 		}
 
 		if isLeader {
-			log.Printf("Found leader: %s", address)
+			// log.Printf("Found leader: %s", address)
 			return address, client, nil
 		}
 		client.Close() // Close connection if not the leader
@@ -85,6 +85,25 @@ func main() {
 	log.Printf("Loading chat...")
 	SendChatLogsRPC(leader)
 
+	// Goroutine loop to periodically get update from leader
+	go func() {
+		leader, client, err = findLeader(nodes) // Leader is a string. Address
+		if err != nil {
+			log.Fatalf("Could not find the leader after checking all nodes: %v", err)
+		}
+		for {
+			for client == nil {
+				log.Println("Client connection is nil. Reconnecting to leader...")
+				leader, client, err = findLeader(nodes)
+				if err != nil {
+					log.Println("Failed to re-discover the leader. Retrying again soon...")
+					time.Sleep(1 * time.Second) // Wait before retrying
+				}
+			}
+			GetChatLogsRPC(client, leader, "R" , clientID)
+		}
+	}()
+
 	// Interactive loop for user input
 	for {
 		// Read input from the user
@@ -99,26 +118,25 @@ func main() {
 		}
 
 		// Check if the commandType starts with 'R' (Read) or 'W' (Write)
-		if len(commandType) == 0 || (commandType[0] != 'R' && commandType[0] != 'W') {
+		if len(commandType) == 0 || (strings.ToLower(commandType) != "r" && strings.ToLower(commandType) != "w") {
 			fmt.Println("Invalid input. Please start your command with 'R' or 'W'.")
 			continue
 		}
 
 		// Handle Read ('R') or Write ('W') command
 		var reply bool
-		if client == nil {
+		for client == nil {
 			log.Println("Client connection is nil. Reconnecting to leader...")
 			leader, client, err = findLeader(nodes)
 			if err != nil {
-				log.Printf("Failed to re-discover the leader: %v", err)
-				time.Sleep(2 * time.Second) // Wait before retrying
-				continue
+				log.Println("Failed to re-discover the leader. Retrying again soon...")
+				time.Sleep(1 * time.Second) // Wait before retrying
 			}
 		}
 
-		if commandType[0] == 'R' {
+		if strings.ToLower(commandType) == "r" {
 			GetChatLogsRPC(client, leader, commandType, clientID)
-		} else if commandType[0] == 'W' {
+		} else if strings.ToLower(commandType) == "w" {
 			// Read write data from the user
 			fmt.Print("Enter your message, or 'exit' to quit: ")
 			var commandMsg string
@@ -133,6 +151,7 @@ func main() {
 			log := fmt.Sprintf("%s: %s", user, commandMsg)
 
 			// Call SingleNode.HandleClientWrite for Write commands
+
 			err = client.Call("SingleNode.HandleClientWrite", log, &reply)
 
 			time.Sleep(1 * time.Second)
@@ -170,7 +189,7 @@ func GetChatLogsRPC(client *rpc.Client, leader string, commandType string, clien
 		return
 	}
 
-	log.Printf("Logs from leader: %v", logs)
+	// log.Printf("Logs from leader: %v", logs)
 
 	// Append logs to a file
 	fileName := fmt.Sprintf("logs/log%s.txt", clientID)
@@ -189,7 +208,7 @@ func GetChatLogsRPC(client *rpc.Client, leader string, commandType string, clien
 			break
 		}
 	}
-	log.Printf("Logs successfully appended to log%s.txt", clientID)
+	// log.Printf("Logs successfully appended to log%s.txt", clientID)
 }
 
 func SendChatLogsRPC(leaderID string) string { // Assume we know the ID of the leader
@@ -209,7 +228,7 @@ func SendChatLogsRPC(leaderID string) string { // Assume we know the ID of the l
 		return fmt.Sprintf("Error calling method: %v", err)
 	}
 
-	fmt.Println("File content:")
-	fmt.Println(string(fileResponse.Content))
+	// fmt.Println("File content:")
+	// fmt.Println(string(fileResponse.Content))
 	return string(fileResponse.Content)
 }

@@ -71,7 +71,6 @@ func (n *Node) CountVote(reply *RequestVoteReply) {
 			n.BecomeLeader()
 		}
 	}
-
 }
 
 // func (n *Node) StartElectionTimer() {

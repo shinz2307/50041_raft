@@ -11,7 +11,7 @@ RUN go mod download
 
 # Copy the entire application code
 COPY . .
-RUN touch /app/example.txt && echo "This is some content inside the file." > /app/example.txt
+RUN touch /app/example.txt
 
 
 # Build the Go application, for faster compilation
