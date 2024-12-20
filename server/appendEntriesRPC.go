@@ -40,23 +40,24 @@ func (n *Node) AppendEntries(args *AppendEntriesRequest, reply *AppendEntriesRes
 		reply.NodeFailed = true
 		return nil // Simulate inactivity while failed
 	}
-
+	//Case: If follower's term > leader's term, return false
+	if  n.CurrentTerm > args.Term {
+		log.Printf("Node %d's term: %d > Leader node %d's term: %d ", n.Id, n.CurrentTerm, args.LeaderID, args.Term)
+		reply.Term = n.CurrentTerm
+		reply.Success = false
+		return nil
+	}
 	// Heartbeat check: If Entries is empty, it is a heartbeat
 	if len(args.Entries) == 0 {
+		n.CurrentTerm = args.Term //test setting followers term same as leader
 		reply.Term = n.CurrentTerm
 		reply.Success = true
-		log.Printf("Node %d received heartbeat from Leader %d", n.Id, args.LeaderID)
+		log.Printf("Node %d at term %d received heartbeat from Leader %d at term%d", n.Id, n.CurrentTerm,args.LeaderID,args.Term)
 		n.ResetStopwatchStartTime()
 		return nil
 	}
 
-	// Case: If follower's term > leader's term, return false
-	// if args.Term < n.CurrentTerm {
-	// 	log.Printf("TODO: LEADER TRANSITION TO CANDIDATE. Node %d's term: %d > Leader node %d's term: %d ", n.Id, n.CurrentTerm, args.LeaderID, args.Term)
-	// 	reply.Term = n.CurrentTerm
-	// 	reply.Success = false
-	// 	return nil
-	// }
+	
 
 	// Consistency check
 	// 1. Check if node has a log entry at index = prevLogIndex
@@ -198,8 +199,17 @@ func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) error {
 			leader.UpdateCommitIndex()
 		}
 	}
+		
 	if !reply.Success { //Handle Failure
 		log.Printf("reply.Success = fail")
+
+		// Failed because of term 
+		if reply.Term > leader.CurrentTerm{
+			log.Printf("Leader Node %d's term is outdated", leader.Id)
+			leader.BecomeFollower(reply.Term)
+			return nil
+		}
+
 		log.Printf("Leader Node %d: AppendEntries to Node %d failed due to inconsistency. Retrying with decremented NextIndex.\n", leader.Id, peerID)
 		leader.mu.Lock()
 		if leader.NextIndex[peerID] > 0 {
@@ -210,6 +220,7 @@ func (leader *Node) SendAppendEntries(peerID int, entries []LogEntry) error {
 		// Retry AppendEntries
 		leader.SendAppendEntries(peerID, leader.Log)
 	}
+
 	return nil
 }
 func (leader *Node) UpdateCommitIndex() {

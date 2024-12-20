@@ -1,2 +1,1 @@
-Term: 1, Carina: yes
-Term: 1, JK: bye
+Term: 2, Carina: Hello
