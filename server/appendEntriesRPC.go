@@ -266,7 +266,7 @@ func (leader *Node) ApplyCommittedEntries() {
 		message := leader.Log[leader.CommitIndex].Command
 		text := fmt.Sprintf("%v", message)
 
-		if _, err := file.Write([]byte(text + "\n")); err != nil {
+		if _, err := file.Write([]byte(text)); err != nil {
 			log.Fatal(err)
 		}
 		if err := file.Close(); err != nil {

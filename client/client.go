@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -90,6 +91,7 @@ func main() {
 
 	// Interactive loop for user input
 	go func () {
+		reader := bufio.NewReader(os.Stdin)
 		for {
 			// Read input from the user
 			fmt.Print("Enter command to send to the leader ('R' or 'W' followed by text, or 'exit' to quit): ")
@@ -126,7 +128,7 @@ func main() {
 				// Read write data from the user
 				fmt.Print("Enter your message, or 'exit' to quit: ")
 				var commandMsg string
-				fmt.Scanln(&commandMsg)
+				commandMsg, _ = reader.ReadString('\n') 
 	
 				// Exit condition
 				if strings.ToLower(commandMsg) == "exit" {
