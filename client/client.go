@@ -18,6 +18,8 @@ type FileResponse struct {
 	Content []byte
 }
 
+var exit_flag bool
+
 // findLeader tries to discover the leader by iterating through all nodes.
 func findLeader(nodes []string) (string, *rpc.Client, error) {
 	for _, address := range nodes {
@@ -47,9 +49,10 @@ func findLeader(nodes []string) (string, *rpc.Client, error) {
 
 func main() {
 	// Add a startup delay to allow nodes to initialize
-	startupDelay := 6 * time.Second
-	log.Printf("Waiting %v for nodes to start up...", startupDelay)
-	time.Sleep(startupDelay)
+	exit_flag = false
+	// startupDelay := 6 * time.Second
+	// log.Printf("Waiting %v for nodes to start up...", startupDelay)
+	// time.Sleep(startupDelay)
 
 	// Get the client ID from an environment variable
 	clientID := os.Getenv("CLIENT_ID")
@@ -85,13 +88,29 @@ func main() {
 	log.Printf("Loading chat...")
 	SendChatLogsRPC(leader)
 
-	// Goroutine loop to periodically get update from leader
-	go func() {
-		leader, client, err = findLeader(nodes) // Leader is a string. Address
-		if err != nil {
-			log.Fatalf("Could not find the leader after checking all nodes: %v", err)
-		}
+	// Interactive loop for user input
+	go func () {
 		for {
+			// Read input from the user
+			fmt.Print("Enter command to send to the leader ('R' or 'W' followed by text, or 'exit' to quit): ")
+			var commandType string
+			fmt.Scanln(&commandType)
+	
+			// Exit condition
+			if strings.ToLower(commandType) == "exit" {
+				fmt.Println("Exiting...")
+				exit_flag = true
+				break
+			}
+	
+			// Check if the commandType starts with 'R' (Read) or 'W' (Write)
+			if len(commandType) == 0 || (strings.ToLower(commandType) != "r" && strings.ToLower(commandType) != "w") {
+				fmt.Println("Invalid input. Please start your command with 'R' or 'W'.")
+				continue
+			}
+	
+			// Handle Read ('R') or Write ('W') command
+			var reply bool
 			for client == nil {
 				log.Println("Client connection is nil. Reconnecting to leader...")
 				leader, client, err = findLeader(nodes)
@@ -100,31 +119,48 @@ func main() {
 					time.Sleep(1 * time.Second) // Wait before retrying
 				}
 			}
-			GetChatLogsRPC(client, leader, "R" , clientID)
+	
+			if strings.ToLower(commandType) == "r" {
+				GetChatLogsRPC(client, leader, commandType, clientID)
+			} else if strings.ToLower(commandType) == "w" {
+				// Read write data from the user
+				fmt.Print("Enter your message, or 'exit' to quit: ")
+				var commandMsg string
+				fmt.Scanln(&commandMsg)
+	
+				// Exit condition
+				if strings.ToLower(commandMsg) == "exit" {
+					fmt.Println("Exiting...")
+					exit_flag = true
+					break
+				}
+	
+				log := fmt.Sprintf("%s: %s", user, commandMsg)
+	
+				// Call SingleNode.HandleClientWrite for Write commands
+	
+				err = client.Call("SingleNode.HandleClientWrite", log, &reply)
+	
+				time.Sleep(1 * time.Second)
+				GetChatLogsRPC(client, leader, commandType, clientID)
+			}
+	
+			// Handle RPC errors
+			if err != nil {
+				log.Printf("Failed to send command to leader (%s): %v", leader, err)
+				client.Close()
+				client = nil // Reset the client to trigger reconnection
+				continue
+			}
 		}
 	}()
 
-	// Interactive loop for user input
+	// Goroutine loop to periodically get update from leader
+	leader, client, err = findLeader(nodes) // Leader is a string. Address
+	if err != nil {
+		log.Fatalf("Could not find the leader after checking all nodes: %v", err)
+	}
 	for {
-		// Read input from the user
-		fmt.Print("Enter command to send to the leader ('R' or 'W' followed by text, or 'exit' to quit): ")
-		var commandType string
-		fmt.Scanln(&commandType)
-
-		// Exit condition
-		if strings.ToLower(commandType) == "exit" {
-			fmt.Println("Exiting...")
-			break
-		}
-
-		// Check if the commandType starts with 'R' (Read) or 'W' (Write)
-		if len(commandType) == 0 || (strings.ToLower(commandType) != "r" && strings.ToLower(commandType) != "w") {
-			fmt.Println("Invalid input. Please start your command with 'R' or 'W'.")
-			continue
-		}
-
-		// Handle Read ('R') or Write ('W') command
-		var reply bool
 		for client == nil {
 			log.Println("Client connection is nil. Reconnecting to leader...")
 			leader, client, err = findLeader(nodes)
@@ -133,41 +169,12 @@ func main() {
 				time.Sleep(1 * time.Second) // Wait before retrying
 			}
 		}
-
-		if strings.ToLower(commandType) == "r" {
-			GetChatLogsRPC(client, leader, commandType, clientID)
-		} else if strings.ToLower(commandType) == "w" {
-			// Read write data from the user
-			fmt.Print("Enter your message, or 'exit' to quit: ")
-			var commandMsg string
-			fmt.Scanln(&commandMsg)
-
-			// Exit condition
-			if strings.ToLower(commandMsg) == "exit" {
-				fmt.Println("Exiting...")
-				break
-			}
-
-			log := fmt.Sprintf("%s: %s", user, commandMsg)
-
-			// Call SingleNode.HandleClientWrite for Write commands
-
-			err = client.Call("SingleNode.HandleClientWrite", log, &reply)
-
-			time.Sleep(1 * time.Second)
-			GetChatLogsRPC(client, leader, commandType, clientID)
-		}
-
-		// Handle RPC errors
-		if err != nil {
-			log.Printf("Failed to send command to leader (%s): %v", leader, err)
-			client.Close()
-			client = nil // Reset the client to trigger reconnection
-			continue
+		GetChatLogsRPC(client, leader, "R" , clientID)
+		if exit_flag {
+			break
 		}
 	}
 }
-
 func GetChatLogsRPC(client *rpc.Client, leader string, commandType string, clientID string) {
 	// Call SingleNode.HandleClientRead for Read commands
 	var response string

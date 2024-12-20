@@ -67,7 +67,7 @@ services:
     stdin_open: true # Keeps stdin open
     tty: true # Allocates a pseudo-TTY
     container_name: client0
-    command: ["./client"] # Run the client binary
+    # command: ["./client"] # Run the client binary
     environment:
       - NAME=Carina
       - CLIENT_ID=0
@@ -87,7 +87,7 @@ services:
     stdin_open: true # Keeps stdin open
     tty: true # Allocates a pseudo-TTY
     container_name: client1
-    command: ["./client"] # Run the client binary
+    # command: ["./client"] # Run the client binary
     environment:
       - NAME=JK
       - CLIENT_ID=1

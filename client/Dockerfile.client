@@ -16,4 +16,4 @@ RUN go build -o client .
 
 
 # Set the command to run the client application
-CMD ["./client"]
+# CMD ["./client"]
